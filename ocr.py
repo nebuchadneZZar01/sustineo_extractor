@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import pandas as pd
 from pytesseract import pytesseract as pt
 
 class WordsBox:
@@ -10,13 +11,13 @@ class WordsBox:
 		self.w = w
 		self.h = h
 
-	def distance_next(next_word):
+	def distance_next(self, next_word):
 		p1 = (self.x + self.w, self.y+self.h)
 		p2 = (next_word.x, self.y+self.h)
 
 		return np.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[0])**2)
 
-	def distance_row(next_row):
+	def distance_row(self, next_row):
 		p1 = (self.x, self.y+self.h)
 		p2 = (next_row.x, self.y)
 		
@@ -35,29 +36,38 @@ class OCR:
 			erosion_kernel = np.ones((1,1), np.uint8)
 			self.work_image = cv2.erode(self.work_image, erosion_kernel)
 
+	# function that detects all the rectangles that contain the labels
 	def extract_labels(self):
 		_, temp = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
 
 		contours, _ = cv2.findContours(temp, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-		print(contours)
 
 		i = 0
 		for contour in contours:
 			if i == 0:
 				i = 1
-			continue
+				continue
 	
 			# cv2.approxPloyDP() function to approximate the shape
 			approx = cv2.approxPolyDP(contour, 0.01 * cv2.arcLength(contour, True), True)
 			
-			# using drawContours() function
-			cv2.drawContours(self.image_gray, [contour], 0, (0, 255, 0), 2)
+			if len(approx) == 4 or len(approx) == 8:
+				cv2.drawContours(self.image, [contour], 0, (0, 255, 0), 2)
 
+				M = cv2.moments(contour)
+				if M['m00'] != 0.0:
+					x = int(M['m10']/M['m00'])
+					y = int(M['m01']/M['m00'])
 
+				cv2.circle(self.image, (x, y), 2, (255, 255, 0), 4)
+
+	# functions that call the tesseract OCR
 	def process_text(self):
 		self.extract_labels()
 
 		res = pt.image_to_data(self.work_image, lang='ita', output_type = pt.Output.DICT)
+		df = pd.DataFrame(res)
+		df.to_csv('image.csv')
 		words = []
 
 		for i in range(0, len(res["text"])):
@@ -88,6 +98,13 @@ class OCR:
 			word = WordsBox(text, x, y, w, h)
 			words.append(word)
 
+		# for i in range(len(words)):
+		# 	if i + 1 < len(words):
+		# 		if (words[i].distance_next(words[i+1]) < 5):
+		# 			cv2.rectangle(self.image_gray, (words[i].x, words[i].y), (words[i+1].x + words[i+1].w, words[i+1].h + words[i+1].h), (0,255,0), 2)
+		# 	else:
+		# 		print('end')
+
 	def show_image(self):
 		if self.scale_factor != 0.0:
 			image_size = self.image.shape
@@ -103,7 +120,3 @@ class OCR:
 	
 	def get_image_work(self):
 		return self.work_image
-
-# ocr = OCR('matrix.jpeg', 1.75)
-# ocr.process_text()
-# ocr.show_image()
