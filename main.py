@@ -1,6 +1,8 @@
 import cv2
 from ocr import OCR
 
+import fractions
+
 def main(image_dir, scale_visualization):
     image = cv2.imread(image_dir)
     image_size = image.shape

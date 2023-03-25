@@ -63,26 +63,36 @@ class OCR:
 
 	# functions that call the tesseract OCR
 	def process_text(self):
-		self.extract_labels()
+		# self.extract_labels()
 
 		res = pt.image_to_data(self.work_image, lang='ita', output_type = pt.Output.DICT)
-		df = pd.DataFrame(res)
-		df.to_csv('image.csv')
-		words = []
+		res = pd.DataFrame(res)
+		res = res.loc[res['conf'] != -1]
+		res.to_csv('image.csv')
 
-		for i in range(0, len(res["text"])):
+		labels = []
+		labels_objs = []
+
+		label = ''
+		label_objs = []
+		for i in range(0, len(res)):
 			# extract the bounding box coordinates of the text region from
 			# the current result
-			x = res["left"][i]
-			y = res["top"][i]
-			w = res["width"][i]
-			h = res["height"][i]
+			x = res.iloc[i]['left']
+			y = res.iloc[i]['top']
+			w = res.iloc[i]['width']
+			h = res.iloc[i]['height']
 			# extract the OCR text itself along with the confidence of the
 			# text localization
-			text = res["text"][i]
-			conf = int(res["conf"][i])
+			text = res.iloc[i]['text']
+			conf = int(res.iloc[i]['conf'])
 
 			if conf > 80:
+				word = WordsBox(text, x, y, w, h)
+				# used to verify if word are in the same label box
+				word_num = int(res.iloc[i]['word_num'])
+				prev_word_num = int(res.iloc[i-1]['word_num']) if i >= 1 else None
+
 				# display the confidence and text to our terminal
 				# print("Confidence: {}".format(conf))
 				# print("Text: {}".format(text))
@@ -94,9 +104,41 @@ class OCR:
 				cv2.rectangle(self.image, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
 				#cv2.circle(self.image, (x, y+h), 2, (0,0,255))
+				if i != 0:
+					if word_num == prev_word_num+1 or ((len(text) > 0) and text[0].islower()):
+						label = label + ' ' + text
+						label_objs.append(word)
+					elif word_num == 1:
+						if label != '':
+							labels.append(label)
+							labels_objs.append(label_objs)
 
-			word = WordsBox(text, x, y, w, h)
-			words.append(word)
+						#label = ''
+						label = text
+
+						label_objs.clear()
+						label_objs.append(word)
+					else:
+						label += text
+						label_objs.append(word)
+				
+				# print(label)
+				# print(label_objs)
+
+		# print(labels)
+		# print(labels_objs)
+
+		for obj, label in zip(labels_objs, labels):
+			print('objects: ', len(obj))
+			
+			for o in obj:
+				print(o.text)
+			
+			break
+			# words = label.split(' ')
+			# print('words: ', len(words))
+			# print('\n')
+
 
 		# for i in range(len(words)):
 		# 	if i + 1 < len(words):
