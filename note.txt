@@ -1,0 +1,2 @@
+sarebbe meglio rilevare la posizione dei singoli box (magari usando una classe Box), sfruttare la posizione delle singole stringhe e rilevare se esse
+si trovano all'interno di quello specifico box. 
