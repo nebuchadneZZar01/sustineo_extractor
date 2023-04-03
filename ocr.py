@@ -40,6 +40,8 @@ class OCR:
 	def extract_labels(self):
 		_, temp = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
 
+		cv2.imshow('shapes', temp)
+
 		contours, _ = cv2.findContours(temp, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
 		i = 0
@@ -52,18 +54,51 @@ class OCR:
 			approx = cv2.approxPolyDP(contour, 0.01 * cv2.arcLength(contour, True), True)
 			
 			if len(approx) == 4 or len(approx) == 8:
-				cv2.drawContours(self.image, [contour], 0, (0, 255, 0), 2)
+				# actual rectangles
+				if len(approx) == 4:
+					cv2.drawContours(self.image, [contour], 0, (0, 255, 0), 2)
+				# merged rectangles
+				elif len(approx) == 8:
+					cv2.drawContours(self.image, [contour], 0, (0, 0, 255), 2)
+					
+					# p1-p2 distance gives height first rectangle
+					r1_A = approx[3][0]
+					r1_B = approx[4][0]
+					r1_C = approx[2][0]
+					r1_D = approx[5][0]
 
-				M = cv2.moments(contour)
-				if M['m00'] != 0.0:
-					x = int(M['m10']/M['m00'])
-					y = int(M['m01']/M['m00'])
+					r2_A = approx[1][0]
+					r2_B = approx[6][0]
+					r2_C = approx[0][0]
+					r2_D = approx[7][0]
 
-				cv2.circle(self.image, (x, y), 2, (255, 255, 0), 4)
+					# draw rect 1
+					cv2.rectangle(self.image, r1_A, r1_D, (0, 255, 0), 3)
 
-	# functions that call the tesseract OCR
+					# draw rect 2 
+					cv2.rectangle(self.image, r2_A, r2_D, (0, 255, 0), 3)
+
+					cv2.circle(self.image, r1_A, 2, (255, 255, 0), 4)
+					cv2.circle(self.image, r1_B, 2, (255, 255, 0), 4)
+					cv2.circle(self.image, r1_C, 2, (255, 255, 0), 4)
+					cv2.circle(self.image, r1_D, 2, (255, 255, 0), 4)
+
+					cv2.circle(self.image, r2_A, 2, (0, 255, 255), 4)
+					cv2.circle(self.image, r2_B, 2, (0, 255, 255), 4)
+					cv2.circle(self.image, r2_C, 2, (0, 255, 255), 4)
+					cv2.circle(self.image, r2_D, 2, (0, 255, 255), 4)
+
+				# M = cv2.moments(contour)
+				# # finding center of the rectangle
+				# if M['m00'] != 0.0:
+				# 	cx = int(M['m10']/M['m00'])
+				# 	cy = int(M['m01']/M['m00'])
+
+				# cv2.circle(self.image, (cx, cy), 2, (255, 255, 0), 4)
+
+	# function that call the tesseract OCR
 	def process_text(self):
-		# self.extract_labels()
+		self.extract_labels()
 
 		res = pt.image_to_data(self.work_image, lang='ita', output_type = pt.Output.DICT)
 		res = pd.DataFrame(res)
