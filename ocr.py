@@ -1,32 +1,16 @@
 import cv2
 import numpy as np
 import pandas as pd
+from plot_elements import *
 from pytesseract import pytesseract as pt
-
-class WordsBox:
-	def __init__(self, text = str, x = int, y = int, w = int, h = int):
-		self.text = text
-		self.x = x
-		self.y = y
-		self.w = w
-		self.h = h
-
-	def distance_next(self, next_word):
-		p1 = (self.x + self.w, self.y+self.h)
-		p2 = (next_word.x, self.y+self.h)
-
-		return np.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[0])**2)
-
-	def distance_row(self, next_row):
-		p1 = (self.x, self.y+self.h)
-		p2 = (next_row.x, self.y)
-		
-		return np.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[0])**2)
 
 class OCR:
 	def __init__(self, image, scale_factor = float):
 		self.image = image
 		self.scale_factor = scale_factor	
+
+		self.labelboxes = []
+		self.textboxes = []
 
 		if self.image is None:
 			print("ERROR: no image has been selected")
@@ -57,15 +41,24 @@ class OCR:
 				# actual rectangles
 				if len(approx) == 4:
 					cv2.drawContours(self.image, [contour], 0, (0, 255, 0), 2)
+
+					A = approx[0][0]		# upper left vertex
+					D = approx[2][0]		# bottom right vertex
+
+					cv2.circle(self.image, A, 2, (255, 255, 0), 4)
+					cv2.circle(self.image, D, 2, (255, 255, 0), 4)
+
+					lb = LabelBox(A, D)
+					self.labelboxes.append(lb)
+
 				# merged rectangles
 				elif len(approx) == 8:
 					cv2.drawContours(self.image, [contour], 0, (0, 0, 255), 2)
 					
-					# p1-p2 distance gives height first rectangle
-					r1_A = approx[3][0]
-					r1_B = approx[4][0]
-					r1_C = approx[2][0]
-					r1_D = approx[5][0]
+					r1_A = approx[3][0]			# upper-left
+					r1_B = approx[4][0]			# upper-right
+					r1_C = approx[2][0]			# bottom-left
+					r1_D = approx[5][0]			# bottom-right
 
 					r2_A = approx[1][0]
 					r2_B = approx[6][0]
@@ -74,9 +67,13 @@ class OCR:
 
 					# draw rect 1
 					cv2.rectangle(self.image, r1_A, r1_D, (0, 255, 0), 3)
+					lb1 = LabelBox(r1_A, r1_D)
+					self.labelboxes.append(lb1)
 
 					# draw rect 2 
 					cv2.rectangle(self.image, r2_A, r2_D, (0, 255, 0), 3)
+					lb2 = LabelBox(r2_A, r2_D)
+					self.labelboxes.append(lb2)
 
 					cv2.circle(self.image, r1_A, 2, (255, 255, 0), 4)
 					cv2.circle(self.image, r1_B, 2, (255, 255, 0), 4)
@@ -105,11 +102,8 @@ class OCR:
 		res = res.loc[res['conf'] != -1]
 		res.to_csv('image.csv')
 
-		labels = []
-		labels_objs = []
+		self.textboxes = []
 
-		label = ''
-		label_objs = []
 		for i in range(0, len(res)):
 			# extract the bounding box coordinates of the text region from
 			# the current result
@@ -123,11 +117,6 @@ class OCR:
 			conf = int(res.iloc[i]['conf'])
 
 			if conf > 80:
-				word = WordsBox(text, x, y, w, h)
-				# used to verify if word are in the same label box
-				word_num = int(res.iloc[i]['word_num'])
-				prev_word_num = int(res.iloc[i-1]['word_num']) if i >= 1 else None
-
 				# display the confidence and text to our terminal
 				# print("Confidence: {}".format(conf))
 				# print("Text: {}".format(text))
@@ -136,60 +125,60 @@ class OCR:
 				# using OpenCV, then draw a bounding box around the text along
 				# with the text itself
 				text = "".join([c if ord(c) < 128 else "" for c in text]).strip()
-				cv2.rectangle(self.image, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
-				#cv2.circle(self.image, (x, y+h), 2, (0,0,255))
-				if i != 0:
-					if word_num == prev_word_num+1 or ((len(text) > 0) and text[0].islower()):
-						label = label + ' ' + text
-						label_objs.append(word)
-					elif word_num == 1:
-						if label != '':
-							labels.append(label)
-							labels_objs.append(label_objs)
+				if len(text) > 0:
+					tb = TextBox((x, y), w, h, text)
+					cv2.rectangle(self.image, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
-						#label = ''
-						label = text
+				self.textboxes.append(tb)
 
-						label_objs.clear()
-						label_objs.append(word)
-					else:
-						label += text
-						label_objs.append(word)
-				
-				# print(label)
-				# print(label_objs)
+	def compose_labelboxes(self):
+		for lb in self.labelboxes:
+			for tb in self.textboxes:
+				lb.add_text_in_label(tb)
 
-		# print(labels)
-		# print(labels_objs)
+		self.verify_labelboxes()
 
-		for obj, label in zip(labels_objs, labels):
-			print('objects: ', len(obj))
-			
-			for o in obj:
-				print(o.text)
-			
-			break
-			# words = label.split(' ')
-			# print('words: ', len(words))
-			# print('\n')
+	def verify_labelboxes(self):
+		print(len(self.labelboxes))
+		for lb in self.labelboxes.copy():
+			if len(lb.label.strip(' ')) == 0 or len(lb.label) == 0:
+				self.labelboxes.remove(lb)
 
+		print(len(self.labelboxes))
 
-		# for i in range(len(words)):
-		# 	if i + 1 < len(words):
-		# 		if (words[i].distance_next(words[i+1]) < 5):
-		# 			cv2.rectangle(self.image_gray, (words[i].x, words[i].y), (words[i+1].x + words[i+1].w, words[i+1].h + words[i+1].h), (0,255,0), 2)
-		# 	else:
-		# 		print('end')
+		for lb in self.labelboxes:
+			lb.label = lb.label[:-1]
+			print('Position: ({x},{y})\nText: {label}\nLabel length: {l}\nValue: {center}\n'.format(x = lb.get_position()[0],\
+																								y = lb.get_position()[1],\
+																								label = lb.get_label(),
+																								l = len(lb.get_label()),
+																								center = lb.get_center()))
+					
+			cv2.circle(self.image, lb.get_center(), 5, (0, 0, 255), 5)
+
+	# function that makes a pandas dataframe
+	# containing the extracted data
+	def construct_dataset(self):
+		d = [ ]
+		for lb in self.labelboxes:
+			d.append((lb.label, lb.get_center()[0], lb.get_center()[1]))
+
+		df = pd.DataFrame(d, columns=('Label', 'GroupRel', 'StakeRel'))
+		print(df.head())
+		df.to_csv('data.csv')
 
 	def show_image(self):
+		self.compose_labelboxes()
+		self.construct_dataset()
+
 		if self.scale_factor != 0.0:
 			image_size = self.image.shape
 			new_size = (int(image_size[1]/self.scale_factor), int(image_size[0]/self.scale_factor))
 			scaled_image = cv2.resize(self.image, new_size)
 			scaled_threshold = cv2.resize(self.work_image, new_size)
 			scaled_grayscale = cv2.resize(self.image_gray, new_size)
-		
+
 		cv2.imshow('grayscale', scaled_grayscale)
 		cv2.imshow('threshold', scaled_threshold)
 		cv2.imshow('ocr', scaled_image)
