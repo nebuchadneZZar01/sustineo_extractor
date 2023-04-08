@@ -1,13 +1,19 @@
 import cv2
 import numpy as np
+from scipy.spatial import distance
+import sys
 
 class Matcher:
     def __init__(self, template, image):
         self.image = image
         self.image_gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
         self.template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+        _, self.work_image = cv2.threshold(self.image_gray, 180, 255, cv2.THRESH_BINARY)
 
         self.rotation = [0, 90]
+
+        cv2.imshow('threshold', self.work_image)
+        cv2.waitKey(0)
 
     # finds the arrow template
     def find_template(self):
@@ -39,6 +45,46 @@ class Matcher:
 
         return top_left, bottom_right
 
+    def find_delimiters(self):
+        edges = cv2.Canny(self.work_image, 50, 150, apertureSize=3)
+        lines = cv2.HoughLines(edges, 1, np.pi/180, 350)
+
+        self.rows = []
+        self.columns = []
+
+        if lines is not None:
+            print(len(lines))
+            for r_theta in lines:
+                arr = np.array(r_theta[0], dtype=np.float64)
+                r, theta = arr
+
+                line_len = 3000
+
+                a = np.cos(theta)
+                b = np.sin(theta)
+
+                x0 = a * r
+                y0 = b * r
+
+                x1 = int(x0 + line_len*(-b))
+                y1 = int(y0 + line_len*(a))
+
+                x2 = int(x0 - line_len*(-b))
+                y2 = int(y0 - line_len*(a))
+                
+                cv2.line(self.image, (x1, y1), (x2, y2), (0, 0, 255), 2)
+                
+                if r_theta[0][1] == 0:
+                    self.rows.append(int(r_theta[0][0]))
+                else:
+                    self.columns.append(int(r_theta[0][0]))
+        
+    
+        # All the changes made in the input image are finally
+        # written on a new image houghlines.jpg
+        cv2.imshow('linesDetected.jpg', self.image)
+        cv2.waitKey(0)
+
         # cv2.imshow('matched', self.image)
         # cv2.waitKey(0)
         # surf = cv2.SIFT_create()
@@ -58,6 +104,55 @@ class Matcher:
         # cv2.imshow('matched', res)
         # cv2.waitKey(0)
 
+    def find_intersections(self):
+        tups = [(r, c) for r in self.rows for c in self.columns]
+        for t in tups:
+            print(t)
+            cv2.circle(self.image, t, 3, (255, 0, 0), 3)
+        
+        cv2.imshow('intersections',image)
+        cv2.waitKey(0)
+
+    def find_plot(self):
+        self.rows.sort()
+        self.columns.sort(reverse=True)
+        print(self.rows)
+        print(self.columns)
+
+        # little rectangle
+        l_bottom_left = (self.rows[0], self.columns[0])
+        l_bottom_right = (self.rows[2], self.columns[0])
+        l_top_left = (self.rows[0], self.columns[3])
+
+        l_w = l_bottom_right[0] - l_bottom_left[0]
+        l_h = l_bottom_left[1] - l_top_left[1]
+
+        cv2.circle(self.image, l_bottom_left, 3, (0, 255, 0), 3)
+        cv2.circle(self.image, l_bottom_right, 3, (0, 255, 0), 3)
+        cv2.circle(self.image, l_top_left, 3, (0, 255, 0), 3)
+
+        print(l_w, l_h)
+
+        # big rectangle
+        b_h = 2 * l_h
+        b_w = 2 * l_w
+
+        print(b_w, b_h)
+
+        b_bottom_left = l_bottom_left
+        b_top_left = (l_bottom_left[0], l_bottom_left[1] - b_h)
+        b_bottom_right = (l_bottom_left[0] + b_w, l_bottom_left[1])
+
+        print(b_top_left)
+
+        cv2.circle(self.image, b_bottom_left, 3, (255, 255, 0), 3)
+        cv2.circle(self.image, b_top_left, 3, (255, 255, 0), 3)
+        cv2.circle(self.image, b_bottom_right, 3, (255, 255, 0), 3)
+
+        cv2.imshow('plot',image)
+        cv2.waitKey(0)
+
+
     def separate_image(self):
         top_left, bottom_right = self.find_template()
         offset = 20
@@ -72,8 +167,10 @@ class Matcher:
 
         return plot, legend
 
-# image = cv2.imread('amadori2.png')
-# template = cv2.imread('template.png')
+image = cv2.imread('amadori2.png')
+template = cv2.imread('template.png')
 
-# m = Matcher(template, image)
-# m.separate_image()
+m = Matcher(template, image)
+m.find_delimiters()
+m.find_intersections()
+m.find_plot()
