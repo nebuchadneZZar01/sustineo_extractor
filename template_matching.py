@@ -3,17 +3,23 @@ import numpy as np
 from scipy.spatial import distance
 import sys
 
-class Matcher:
-    def __init__(self, template, image):
+class Cropper:
+    def __init__(self, template, image, debug_mode = False):
         self.image = image
+        self.image_size = self.image.shape[0:2]
+        self.image_size = self.image_size[::-1]             
         self.image_gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
         self.template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
         _, self.work_image = cv2.threshold(self.image_gray, 180, 255, cv2.THRESH_BINARY)
 
         self.rotation = [0, 90]
 
-        cv2.imshow('threshold', self.work_image)
-        cv2.waitKey(0)
+        self.debug_mode = debug_mode
+        if self.debug_mode:
+            self.image_debug = self.image.copy()
+
+            cv2.imshow('threshold', self.work_image)
+            cv2.waitKey(0)
 
     # finds the arrow template
     def find_template(self):
@@ -53,7 +59,6 @@ class Matcher:
         self.columns = []
 
         if lines is not None:
-            print(len(lines))
             for r_theta in lines:
                 arr = np.array(r_theta[0], dtype=np.float64)
                 r, theta = arr
@@ -71,106 +76,92 @@ class Matcher:
 
                 x2 = int(x0 - line_len*(-b))
                 y2 = int(y0 - line_len*(a))
-                
-                cv2.line(self.image, (x1, y1), (x2, y2), (0, 0, 255), 2)
-                
+                                
                 if r_theta[0][1] == 0:
                     self.rows.append(int(r_theta[0][0]))
                 else:
                     self.columns.append(int(r_theta[0][0]))
+
+                if self.debug_mode:
+                    cv2.line(self.image_debug, (x1, y1), (x2, y2), (0, 0, 255), 2)
         
-    
-        # All the changes made in the input image are finally
-        # written on a new image houghlines.jpg
-        cv2.imshow('linesDetected.jpg', self.image)
-        cv2.waitKey(0)
+        if self.debug_mode:
+            cv2.imshow('linesDetected.jpg', self.image_debug)
+            cv2.waitKey(0)
 
-        # cv2.imshow('matched', self.image)
-        # cv2.waitKey(0)
-        # surf = cv2.SIFT_create()
-
-        # kp1, des1 = surf.detectAndCompute(self.image_gray, None)
-        # kp2, des2 = surf.detectAndCompute(self.template, None)
-
-        # bf = cv2.BFMatcher(cv2.NORM_L1, crossCheck = False)
-        # clusters = np.array([des2])
-        # bf.add(clusters)
-
-        # matches = bf.match(des2)
-        # matches = sorted(matches, key = lambda x:x.distance)
-
-        # res = cv2.drawMatches(self.image, kp1, self.template, kp2, matches[:10], None, flags=2)
-
-        # cv2.imshow('matched', res)
-        # cv2.waitKey(0)
 
     def find_intersections(self):
         tups = [(r, c) for r in self.rows for c in self.columns]
-        for t in tups:
-            print(t)
-            cv2.circle(self.image, t, 3, (255, 0, 0), 3)
         
-        cv2.imshow('intersections',image)
-        cv2.waitKey(0)
+        if self.debug_mode:
+            for t in tups:
+                cv2.circle(self.image_debug, t, 3, (255, 0, 0), 3)
+
+            cv2.imshow('intersections',self.image_debug)
+            cv2.waitKey(0)
 
     def find_plot(self):
+        self.find_delimiters()
+        self.find_intersections()
         self.rows.sort()
         self.columns.sort(reverse=True)
-        print(self.rows)
-        print(self.columns)
 
-        # little rectangle
+        # LITTLE RECTANGLE IN THE PLOT
+        # vertices delimiting the rectangle
         l_bottom_left = (self.rows[0], self.columns[0])
         l_bottom_right = (self.rows[2], self.columns[0])
         l_top_left = (self.rows[0], self.columns[3])
 
+        # size of the rectangle's edges
         l_w = l_bottom_right[0] - l_bottom_left[0]
         l_h = l_bottom_left[1] - l_top_left[1]
 
-        cv2.circle(self.image, l_bottom_left, 3, (0, 255, 0), 3)
-        cv2.circle(self.image, l_bottom_right, 3, (0, 255, 0), 3)
-        cv2.circle(self.image, l_top_left, 3, (0, 255, 0), 3)
+        if self.debug_mode:
+            cv2.circle(self.image_debug, l_bottom_left, 3, (0, 255, 0), 3)
+            cv2.circle(self.image_debug, l_bottom_right, 3, (0, 255, 0), 3)
+            cv2.circle(self.image_debug, l_top_left, 3, (0, 255, 0), 3)
 
-        print(l_w, l_h)
+        # BIG RECTANGLE (THE PLOT)
+        # size of the rectangle's edges
+        b_h = 3 * l_h
+        b_w = 3 * l_w
 
-        # big rectangle
-        b_h = 2 * l_h
-        b_w = 2 * l_w
-
-        print(b_w, b_h)
-
+        # vertices delimiting the rectangle
         b_bottom_left = l_bottom_left
-        b_top_left = (l_bottom_left[0], l_bottom_left[1] - b_h)
-        b_bottom_right = (l_bottom_left[0] + b_w, l_bottom_left[1])
+        # if the vertex calculated coordinates are beyond the image size
+        # then it is set exactly on the border of the image
+        b_top_left = (l_bottom_left[0], l_bottom_left[1] - b_h) if (l_bottom_left[1] - b_h) > 0 else (l_bottom_left[0], 0)
+        b_bottom_right = (l_bottom_left[0] + b_w, l_bottom_left[1]) if (l_bottom_left[0] + b_w < self.image_size[0]) else (self.image_size[0], l_bottom_left[1])
 
-        print(b_top_left)
-
-        cv2.circle(self.image, b_bottom_left, 3, (255, 255, 0), 3)
-        cv2.circle(self.image, b_top_left, 3, (255, 255, 0), 3)
-        cv2.circle(self.image, b_bottom_right, 3, (255, 255, 0), 3)
-
-        cv2.imshow('plot',image)
-        cv2.waitKey(0)
-
+        if self.debug_mode:
+            cv2.circle(self.image_debug, b_bottom_left, 3, (255, 255, 0), 3)
+            cv2.circle(self.image_debug, b_top_left, 3, (255, 255, 0), 3)
+            cv2.circle(self.image_debug, b_bottom_right, 3, (255, 255, 0), 3)
+            
+            cv2.imshow('plot', self.image_debug)
+            cv2.waitKey(0)
+        
+        return b_top_left, b_bottom_right
 
     def separate_image(self):
-        top_left, bottom_right = self.find_template()
+        top_left, bottom_right = self.find_plot()
         offset = 20
         w = top_left[0] - bottom_right[0]
         h = bottom_right[1] - top_left[0]
-        plot = self.image[top_left[1]-offset:bottom_right[1], top_left[0]:bottom_right[0]+offset]
+        plot = self.image[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
         legend = self.image[bottom_right[1]:self.image.shape[1], top_left[0]:bottom_right[0]]
 
-        cv2.imshow('plot', plot)
-        cv2.imshow('legend', legend)
-        cv2.waitKey(0)
+        if self.debug_mode:
+            cv2.imshow('plot', plot)
+            cv2.imshow('legend', legend)
+            cv2.waitKey(0)
 
         return plot, legend
 
-image = cv2.imread('amadori2.png')
-template = cv2.imread('template.png')
+# image = cv2.imread('amadori2.png')
+# template = cv2.imread('template.png')
 
-m = Matcher(template, image)
-m.find_delimiters()
-m.find_intersections()
-m.find_plot()
+# m = Matcher(template, image)
+# m.find_delimiters()
+# m.find_intersections()
+# m.find_plot()

@@ -1,26 +1,39 @@
+import argparse
+import os
 import cv2
 from ocr import OCR
+from template_matching import Cropper 
 
-import fractions
-from template_matching import Matcher 
-
-def main(image_dir, template_dir, scale_visualization):
+def main(image_dir, template_dir, scale_visualization, debug_mode):
     image = cv2.imread(image_dir)
     template = cv2.imread(template_dir)
     image_size = image.shape
     new_size = (int(image_size[1]/scale_visualization), int(image_size[0]/scale_visualization))
     image_scaled = cv2.resize(image, new_size)
-    cv2.imshow('original', image_scaled)
-    cv2.waitKey(0)
 
-    m = Matcher(template, image)
+    if debug_mode:
+        cv2.imshow('original', image_scaled)
+        cv2.waitKey(0)
+    
+    m = Cropper(template, image, debug_mode)
     plot, label = m.separate_image()
 
-    ocr = OCR(plot, scale_visualization)
+    ocr = OCR(plot, scale_visualization, debug_mode)
     ocr.process_text()
 
-    ocr.show_image()
+    if debug_mode:
+        ocr.show_image()
 
-im = 'amadori2.png'
+parser = argparse.ArgumentParser(prog='Sustineo Extractor',
+                                description='This program extracts data from materiality matrices and reinterprets them in a more undestandable form.')
+
+
+parser.add_argument('filename')
+parser.add_argument('-s', '--size-factor', type=float)
+parser.add_argument('-d', '--debug-mode', type=bool, default=False)
+
+args = parser.parse_args()
+
 tmp = 'template.png'
-main(im, tmp, 1.5)
+
+main(args.filename, tmp, args.size_factor, args.debug_mode)
