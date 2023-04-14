@@ -62,18 +62,3 @@ class LabelBox(Box):
 
     def get_label(self):
         return self.label
-
-# text1 = TextBox((10, 10), 10, 10, 'ciao')
-# text2 = TextBox((20, 20), 10, 10, 'come')
-# text3 = TextBox((50, 30), 10, 10, 'va')
-# text4 = TextBox((50, 40), 10, 10, 'la')
-# text5 = TextBox((50, 50), 10, 10, 'vita')
-
-# lb = LabelBox((5, 5), (100,100))
-# lb.add_text_in_label(text1)
-# lb.add_text_in_label(text2)
-# lb.add_text_in_label(text3)
-# lb.add_text_in_label(text4)
-# lb.add_text_in_label(text5)
-
-# print(lb.get_label())

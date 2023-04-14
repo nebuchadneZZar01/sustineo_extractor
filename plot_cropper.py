@@ -4,7 +4,7 @@ from scipy.spatial import distance
 import sys
 
 class Cropper:
-    def __init__(self, template, image, debug_mode = False):
+    def __init__(self, template, image, debug_mode = False, scale_factor = float):
         self.image = image
         self.image_size = self.image.shape[0:2]
         self.image_size = self.image_size[::-1]             
@@ -12,15 +12,22 @@ class Cropper:
         self.template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
         _, self.work_image = cv2.threshold(self.image_gray, 180, 255, cv2.THRESH_BINARY)
 
+        # used in the template matching
         self.rotation = [0, 90]
 
         self.debug_mode = debug_mode
         if self.debug_mode:
+            self.scale_size = (int(self.image_size[0]/scale_factor), int(self.image_size[1]/scale_factor))
             self.image_debug = self.image.copy()
 
-            cv2.imshow('threshold', self.work_image)
-            cv2.waitKey(0)
+            self.scale_factor = scale_factor
 
+            tmp = cv2.resize(self.work_image, self.scale_size)
+
+            cv2.imshow('threshold', tmp)
+            cv2.waitKey(0)
+    
+    # ---- TEMPLATE MATCHING PART (MAYBE WILL DELETE) ----
     # finds the arrow template
     def find_template(self):
         shape = self.template.shape
@@ -50,7 +57,10 @@ class Cropper:
             # cv2.rectangle(self.image, top_left_tmp, bottom_right_tmp, (0,0,255), 2)
 
         return top_left, bottom_right
+    # ---- END TEMPLATE MATCHING PART ----
 
+    # finds all the blocks composing the plot
+    # using the Hough transform
     def find_delimiters(self):
         edges = cv2.Canny(self.work_image, 50, 150, apertureSize=3)
         lines = cv2.HoughLines(edges, 1, np.pi/180, 350)
@@ -86,10 +96,14 @@ class Cropper:
                     cv2.line(self.image_debug, (x1, y1), (x2, y2), (0, 0, 255), 2)
         
         if self.debug_mode:
-            cv2.imshow('linesDetected.jpg', self.image_debug)
+            tmp = cv2.resize(self.image_debug, self.scale_size)
+
+            cv2.imshow('lines detected', tmp)
             cv2.waitKey(0)
 
-
+    # finds the intersection point between lines
+    # in order to detect the vertices that defines
+    # the blocks composing the plot
     def find_intersections(self):
         tups = [(r, c) for r in self.rows for c in self.columns]
         
@@ -97,9 +111,13 @@ class Cropper:
             for t in tups:
                 cv2.circle(self.image_debug, t, 3, (255, 0, 0), 3)
 
-            cv2.imshow('intersections',self.image_debug)
+            tmp = cv2.resize(self.image_debug, self.scale_size)
+
+            cv2.imshow('intersections', tmp)
             cv2.waitKey(0)
 
+    # using a scale 1:3 (we know that the materiality matrices contains 3x3 blocks)
+    # we find the vertices defining the entire plot
     def find_plot(self):
         self.find_delimiters()
         self.find_intersections()
@@ -137,8 +155,9 @@ class Cropper:
             cv2.circle(self.image_debug, b_bottom_left, 3, (255, 255, 0), 3)
             cv2.circle(self.image_debug, b_top_left, 3, (255, 255, 0), 3)
             cv2.circle(self.image_debug, b_bottom_right, 3, (255, 255, 0), 3)
-            
-            cv2.imshow('plot', self.image_debug)
+
+            tmp = cv2.resize(self.image_debug, self.scale_size)
+            cv2.imshow('plot', tmp)
             cv2.waitKey(0)
         
         return b_top_left, b_bottom_right
@@ -152,16 +171,23 @@ class Cropper:
         legend = self.image[bottom_right[1]:self.image.shape[1], top_left[0]:bottom_right[0]]
 
         if self.debug_mode:
-            cv2.imshow('plot', plot)
-            cv2.imshow('legend', legend)
+            tmp_plot_r_size = (int(plot.shape[1]/self.scale_factor), int(plot.shape[0]/self.scale_factor))
+            tmp_leg_r_size = (int(legend.shape[1]/self.scale_factor), int(legend.shape[0]/self.scale_factor))
+
+            tmp_plot = cv2.resize(plot, tmp_plot_r_size)
+            tmp_leg = cv2.resize(legend, tmp_leg_r_size)
+
+            cv2.imshow('plot', tmp_plot)
+            cv2.imshow('legend', tmp_leg)
             cv2.waitKey(0)
 
         return plot, legend
 
-# image = cv2.imread('amadori2.png')
-# template = cv2.imread('template.png')
+if __name__ == '__main__':
+    image = cv2.imread('amadori2.png')
+    template = cv2.imread('template.png')
 
-# m = Matcher(template, image)
-# m.find_delimiters()
-# m.find_intersections()
-# m.find_plot()
+    m = Cropper(template, image)
+    m.find_delimiters()
+    m.find_intersections()
+    m.find_plot()
