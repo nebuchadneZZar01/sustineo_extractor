@@ -5,8 +5,9 @@ from plot_elements import *
 from pytesseract import pytesseract as pt
 
 class OCR:
-	def __init__(self, image, scale_factor = float, debug_mode = False):
+	def __init__(self, image, image_fn, scale_factor = float, debug_mode = False):
 		self.image = image
+		self.image_fn = image_fn
 
 		self.labelboxes = []				# will contain the bounding boxes of the entire labels
 		self.textboxes = []					# will contain the bounding boxes of every single word
@@ -51,7 +52,7 @@ class OCR:
 			# function to approximate the shape
 			approx = cv2.approxPolyDP(contour, 0.01 * cv2.arcLength(contour, True), True)
 			
-			if len(approx) == 4 or len(approx) == 8:
+			if len(approx) >= 4:
 				# actual rectangles
 				if len(approx) == 4:
 					A = approx[0][0]		# upper left vertex
@@ -103,6 +104,10 @@ class OCR:
 						cv2.circle(self.image_debug, r2_B, 2, (0, 255, 255), 4)
 						cv2.circle(self.image_debug, r2_C, 2, (0, 255, 255), 4)
 						cv2.circle(self.image_debug, r2_D, 2, (0, 255, 255), 4)
+				elif (len(contour) == 14):
+					if self.debug_mode:
+						cv2.drawContours(self.image_debug, [contour], 0, (0, 255, 255), 2)
+						print(contour)
 
 	# function that call the tesseract OCR
 	def process_text(self):
@@ -111,6 +116,59 @@ class OCR:
 		res = pt.image_to_data(self.work_image, lang='ita', output_type = pt.Output.DICT)
 		res = pd.DataFrame(res)
 		res = res.loc[res['conf'] != -1]
+
+		# verifies the color of the white and black pixels
+		# in the binary image (considers the first understandable word): 
+		# if the num of white pixels is higher than the
+		# black ones, then the text is black (dark in the 
+		# original image), otherwise is white
+		lett_cnt = 0
+		while lett_cnt < len(res):
+			x = res.iloc[lett_cnt]['left']
+			y = res.iloc[lett_cnt]['top']
+			w = res.iloc[lett_cnt]['width']
+			h = res.iloc[lett_cnt]['height']
+			text = res.iloc[lett_cnt]['text']
+
+			conf = int(res.iloc[lett_cnt]['conf'])
+
+			if conf > 80:
+				if len(text.strip(' ')) != 0 :
+					# region of interest of the letter
+					letter_roi = self.work_image[y:y+h, x:x+w]
+
+					w_cnt = 0
+					b_cnt = 0
+					for r in letter_roi:
+						for pixel in r:
+							if pixel == 255: w_cnt += 1
+							else: b_cnt += 1
+
+					print('Num of white pixels:', w_cnt)
+					print('Num of black pixels:', b_cnt)
+
+					# converts to negative
+					if w_cnt < b_cnt:
+						print('In the threshold image, the text is white')
+						print('Converting to negative')
+
+						self.work_image = 255 - self.work_image
+						dilatation_kernel = np.ones((2,2), np.uint8)
+						self.work_image = cv2.dilate(self.work_image, dilatation_kernel)
+
+						res = pt.image_to_data(self.work_image, lang='ita', output_type = pt.Output.DICT)
+						res = pd.DataFrame(res)
+						res = res.loc[res['conf'] != -1]
+
+						if self.debug_mode:
+							tmp = cv2.resize(self.work_image, self.scale_size)
+
+							cv2.imshow('negative', tmp)
+							cv2.waitKey(0)
+
+					break
+				else:
+					lett_cnt += 1
 
 		for i in range(0, len(res)):
 			# extract the bounding box coordinates of the text region from
@@ -150,6 +208,30 @@ class OCR:
 
 		self.verify_labelboxes()
 
+	def renormalize_x_group(self, value, norm_min, norm_max):
+		x_values = [lb.get_center()[0] for lb in self.labelboxes]
+
+		min_x = min(x_values)
+		max_x = max(x_values)
+
+		norm_value = (norm_max - norm_min) * (value - min_x)/(max_x - min_x) 
+
+		return norm_value
+
+	def renormalize_y_stake(self, value, norm_min, norm_max):
+		y_values = [lb.get_center()[1] for lb in self.labelboxes]
+
+		min_y = min(y_values)
+		max_y = max(y_values)
+
+		norm_value = (norm_max - norm_min) * (value - min_y)/(max_y - min_y) 
+
+		norm_value -= norm_max
+		if norm_value < 0:
+			norm_value *= -1
+	
+		return norm_value
+
 	# deletes all blank labelboxes
 	def verify_labelboxes(self):
 		for lb in self.labelboxes.copy():
@@ -172,15 +254,21 @@ class OCR:
 	# containing the extracted data
 	def construct_dataset(self):
 		for lb in self.labelboxes:
-			self.datas.append((lb.label, lb.get_center()[0], lb.get_center()[1]))
+			group_value = self.renormalize_x_group(lb.get_center()[0], 0, 300)
+			stake_value = self.renormalize_y_stake(lb.get_center()[1], 0, 300)
+			self.datas.append((lb.label, group_value, stake_value))
 
 		df = pd.DataFrame(self.datas, columns=('Label', 'GroupRel', 'StakeRel'))
 
 		print('Showing the first rows of the dataset:')
 		print(df.head())
-		df.to_csv('data.csv')
+		
+		img_extension = self.image_fn[-3:len(self.image_fn)]
+		csv_fn = self.image_fn.replace(img_extension, 'csv')
 
-		print('\nExtracted data was exported to data.csv')
+		df.to_csv(csv_fn)
+
+		print('\nExtracted data was exported to {fn}'.format(fn = csv_fn))
 
 	def extract_data(self):
 		self.compose_labelboxes()

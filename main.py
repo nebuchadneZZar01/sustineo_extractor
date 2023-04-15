@@ -18,7 +18,7 @@ def main(image_dir, template_dir, scale_visualization, debug_mode):
     m = Cropper(template, image, debug_mode, scale_visualization)
     plot, label = m.separate_image()
 
-    ocr = OCR(plot, scale_visualization, debug_mode)
+    ocr = OCR(plot, image_dir, scale_visualization, debug_mode)
     ocr.process_text()
     ocr.extract_data()
 
