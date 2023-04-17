@@ -1,4 +1,5 @@
 import cv2
+import math
 import numpy as np
 import pandas as pd
 from plot_elements import *
@@ -52,7 +53,7 @@ class OCR:
 			# function to approximate the shape
 			approx = cv2.approxPolyDP(contour, 0.01 * cv2.arcLength(contour, True), True)
 			
-			if len(approx) >= 4:
+			if len(approx) >= 4 and len(approx) <= 8:
 				# actual rectangles
 				if len(approx) == 4:
 					A = approx[0][0]		# upper left vertex
@@ -104,10 +105,62 @@ class OCR:
 						cv2.circle(self.image_debug, r2_B, 2, (0, 255, 255), 4)
 						cv2.circle(self.image_debug, r2_C, 2, (0, 255, 255), 4)
 						cv2.circle(self.image_debug, r2_D, 2, (0, 255, 255), 4)
-				elif (len(contour) == 14):
-					if self.debug_mode:
-						cv2.drawContours(self.image_debug, [contour], 0, (0, 255, 255), 2)
-						print(contour)
+				# for all figures that have more than 8 edges
+				elif len(contour) > 8:
+					len_contour = len(contour)
+					# this loop deletes all vertices such that the euclidean distance
+					# with the next one is lower than a certain offset
+					offset = 10
+					while len_contour > 8:
+						i = 0
+						while i < len_contour-1:
+							point1 = contour[i][0]
+							point2 = contour[i+1][0]
+							x1 = point1[0]
+							x2 = point2[0]
+							y1 = point1[1]
+							y2 = point2[1]
+							dist = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+							if dist <= offset:
+								contour = np.delete(contour, i, axis=0)
+								len_contour -= 1
+								break
+							i += 1
+
+					approx = cv2.approxPolyDP(contour, 0.01 * cv2.arcLength(contour, True), True)
+
+					# then the shape can be divided into more two rectangles
+					try:
+						r1_A = approx[1][0]
+						r1_D = approx[5][0]			# bottom-right
+						
+						lb1 = LabelBox(r1_A, r1_D)
+						self.labelboxes.append(lb1)
+
+						r2_B = approx[2][0]			# upper-right					
+						r2_C = approx[4][0]			# upper-right					
+						r2_D = approx[3][0]			# upper-left
+						r2_A = (r2_C[0], r2_B[1])
+
+						lb2 = LabelBox(r2_A, r2_D)
+						self.labelboxes.append(lb2)
+
+						if self.debug_mode:
+							cv2.drawContours(self.image_debug, [contour], 0, (0, 255, 255), 2)
+
+							# draw rect 1
+							cv2.rectangle(self.image_debug, r1_A, r1_D, (0, 255, 0), 3)
+							cv2.circle(self.image_debug, r1_A, 2, (255, 255, 0), 4)
+							cv2.circle(self.image_debug, r1_D, 2, (255, 255, 0), 4)
+
+							# draw rect 2
+							cv2.rectangle(self.image_debug, r2_A, r2_D, (0, 255, 0), 3)
+							cv2.circle(self.image_debug, r2_A, 2, (255, 255, 0), 4)
+							cv2.circle(self.image_debug, r2_B, 2, (255, 255, 0), 4)
+							cv2.circle(self.image_debug, r2_C, 2, (255, 255, 0), 4)
+							cv2.circle(self.image_debug, r2_D, 2, (255, 255, 0), 4)
+					except:
+						print('no vertices ')
 
 	# function that call the tesseract OCR
 	def process_text(self):
