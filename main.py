@@ -1,7 +1,7 @@
 import argparse
 import os
 import cv2
-from ocr import OCR
+from ocr import *
 from plot_cropper import Cropper 
 
 def main(image_dir, template_dir, scale_visualization, debug_mode):
@@ -16,11 +16,13 @@ def main(image_dir, template_dir, scale_visualization, debug_mode):
         cv2.waitKey(0)
     
     m = Cropper(template, image, debug_mode, scale_visualization)
-    plot, label = m.separate_image()
+    plot, legend = m.separate_image()
 
-    ocr = OCR(plot, image_dir, scale_visualization, debug_mode)
+    ocr = PlotOCR(plot, image_dir, scale_visualization, debug_mode)
     ocr.process_text()
     ocr.extract_data()
+
+    leg = LegendOCR(legend, scale_visualization, debug_mode)
 
     if debug_mode:
         ocr.show_image()

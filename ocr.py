@@ -6,8 +6,27 @@ from plot_elements import *
 from pytesseract import pytesseract as pt
 
 class OCR:
-	def __init__(self, image, image_fn, scale_factor = float, debug_mode = False):
+	def __init__(self, image, scale_factor = float, debug_mode = False):
 		self.image = image
+		self.debug_mode = debug_mode
+
+		self.image_gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+		
+		if debug_mode:
+			self.image_debug = self.image.copy()
+			self.scale_factor = scale_factor if scale_factor != 0.0 else 1.0
+			
+			self.scale_size = (int(self.image.shape[1]/self.scale_factor), int(self.image.shape[0]/self.scale_factor))
+
+	def process_text(self):
+		pass
+
+	def show_image(self):
+		pass
+
+class PlotOCR(OCR):
+	def __init__(self, image, image_fn, scale_factor = float, debug_mode = False):
+		super(PlotOCR, self).__init__(image, scale_factor, debug_mode)
 		self.image_fn = image_fn
 
 		self.labelboxes = []				# will contain the bounding boxes of the entire labels
@@ -15,19 +34,9 @@ class OCR:
 
 		self.datas = [ ]					# will contain the actually extracted data, which will then exported to a csv file
 
-		self.image_gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
 		_, self.work_image = cv2.threshold(self.image_gray, 185, 255, cv2.THRESH_BINARY)
-		erosion_kernel = np.ones((1,1), np.uint8)
-		self.work_image = cv2.dilate(self.work_image, erosion_kernel)
 		
-		self.debug_mode = debug_mode
-
-		if debug_mode:
-			self.image_debug = self.image.copy()
-			self.scale_factor = scale_factor if scale_factor != 0.0 else 1.0
-			
-			self.scale_size = (int(self.image.shape[1]/self.scale_factor), int(self.image.shape[0]/self.scale_factor))
-
+		
 	# function that detects all the rectangles that contain the labels
 	def extract_labels(self):
 		_, shapes = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
@@ -256,6 +265,7 @@ class OCR:
 	# text is actually in that box
 	def compose_labelboxes(self):
 		for lb in self.labelboxes:
+			lb.set_color(self.image[lb.get_position()[1]+2, lb.get_position()[0]+2])
 			for tb in self.textboxes:
 				lb.add_text_in_label(tb)
 
@@ -309,9 +319,9 @@ class OCR:
 		for lb in self.labelboxes:
 			group_value = self.renormalize_x_group(lb.get_center()[0], 0, 300)
 			stake_value = self.renormalize_y_stake(lb.get_center()[1], 0, 300)
-			self.datas.append((lb.label, group_value, stake_value))
+			self.datas.append((lb.label, group_value, stake_value, lb.color))
 
-		df = pd.DataFrame(self.datas, columns=('Label', 'GroupRel', 'StakeRel'))
+		df = pd.DataFrame(self.datas, columns=('Label', 'GroupRel', 'StakeRel', 'Color'))
 
 		print('Showing the first rows of the dataset:')
 		print(df.head())
@@ -340,3 +350,28 @@ class OCR:
 	
 	def get_image_work(self):
 		return self.work_image
+
+class LegendOCR(OCR):
+	def __init__(self, image, scale_factor, debug_mode):
+		super(LegendOCR, self).__init__(image, scale_factor, debug_mode)
+		
+		_, self.work_image = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
+		erosion_kernel = np.ones((1,1), np.uint8)
+		self.work_image = cv2.dilate(self.work_image, erosion_kernel)
+
+		if debug_mode:
+			tmp = cv2.resize(self.work_image, self.scale_size)
+
+			cv2.imshow('legend shapes', tmp)
+			cv2.waitKey(0)
+
+	def process_forms(self):
+		contours, _ = cv2.findContours(dilated_shapes, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+		i = 0
+		for contour in contours:
+			if i == 0:
+				i = 1
+				continue
+
+			approx = cv2.approxPolyDP(contour, 0.01 * cv2.arcLength(contour, True), True)

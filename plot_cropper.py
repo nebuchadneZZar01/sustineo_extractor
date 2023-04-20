@@ -164,11 +164,23 @@ class Cropper:
 
     def separate_image(self):
         top_left, bottom_right = self.find_plot()
-        offset = 20
-        w = top_left[0] - bottom_right[0]
-        h = bottom_right[1] - top_left[0]
+        v_offset = 20                               # vertical offset
+        h_offset = 200                              # horizontal offset
+        w = top_left[0] - bottom_right[0] if (top_left[0] - bottom_right[0]) > 0 else -1 * (top_left[0] - bottom_right[0])
+        h = bottom_right[1] - top_left[0] if (bottom_right[1] - top_left[0]) > 0 else -1 * (bottom_right[1] - top_left[0])
+    
         plot = self.image[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
-        legend = self.image[bottom_right[1]:self.image.shape[1], top_left[0]:bottom_right[0]]
+
+        print(self.image_size[0] - w)
+
+        # if the image has a legend on the left or on the right
+        # the legend part will be composed by the intire original
+        # image, but with the plot part filled with white
+        if (self.image_size[0] - w) > h_offset:
+            legend = self.image.copy()
+            cv2.rectangle(legend, top_left, bottom_right, (255, 255, 255), -1)
+        else:
+            legend = self.image[bottom_right[1]:self.image.shape[1], top_left[0]:bottom_right[0]]
 
         if self.debug_mode:
             tmp_plot_r_size = (int(plot.shape[1]/self.scale_factor), int(plot.shape[0]/self.scale_factor))

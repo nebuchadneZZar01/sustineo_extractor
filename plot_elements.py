@@ -50,15 +50,21 @@ class LabelBox(Box):
     def __init__(self, top_left, bottom_right):
         super(LabelBox, self).__init__(top_left, bottom_right)
         self.label = ''
+        self.color = None                                  # background color of the box
     
-    # cuncatenate the word to the actual label
-    # if its bounding box is contained in the label
-    # box
+    # cuncatenate the word to the actual label if its 
+    # bounding box is contained in the label box
     def add_text_in_label(self, tb=TextBox):
         if tb.in_box(self):
             self.label += tb.get_text() + ' '
         else:
             pass
+
+    def set_color(self, color_bgr):
+        self.color = tuple(color_bgr[::-1])
+
+    def get_color(self):
+        return self.color
 
     def get_label(self):
         return self.label
