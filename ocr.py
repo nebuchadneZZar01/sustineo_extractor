@@ -1,3 +1,4 @@
+import os
 import cv2
 import math
 import numpy as np
@@ -6,12 +7,16 @@ from plot_elements import *
 from pytesseract import pytesseract as pt
 
 class OCR:
-	def __init__(self, image, scale_factor = float, debug_mode = False):
+	def __init__(self, image, lang = str, scale_factor = float, debug_mode = False):
 		self.image = image
 		self.debug_mode = debug_mode
+		self.lang = lang						# language of the labels
 
 		self.image_gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
 		
+		# image sizes will be divided by scale factor
+		# to permit a better visualization on lower
+		# resolution screens
 		if debug_mode:
 			self.image_debug = self.image.copy()
 			self.scale_factor = scale_factor if scale_factor != 0.0 else 1.0
@@ -25,8 +30,8 @@ class OCR:
 		pass
 
 class PlotOCR(OCR):
-	def __init__(self, image, image_fn, scale_factor = float, debug_mode = False):
-		super(PlotOCR, self).__init__(image, scale_factor, debug_mode)
+	def __init__(self, image, image_fn, lang = str, scale_factor = float, debug_mode = False):
+		super(PlotOCR, self).__init__(image, lang, scale_factor, debug_mode)
 		self.image_fn = image_fn
 
 		self.labelboxes = []				# will contain the bounding boxes of the entire labels
@@ -171,7 +176,7 @@ class PlotOCR(OCR):
 					except:
 						print('no vertices ')
 
-	# function that call the tesseract OCR
+	# function that calls the tesseract OCR
 	def process_text(self):
 		self.extract_labels()
 
@@ -327,11 +332,17 @@ class PlotOCR(OCR):
 		print(df.head())
 		
 		img_extension = self.image_fn[-3:len(self.image_fn)]
-		csv_fn = self.image_fn.replace(img_extension, 'csv')
 
-		df.to_csv(csv_fn)
+		out_dir = os.path.join('out')
 
-		print('\nExtracted data was exported to {fn}'.format(fn = csv_fn))
+		if not os.path.isdir(out_dir):
+			os.mkdir(out_dir)
+
+		csv_fn = self.image_fn.replace(img_extension, 'csv').replace('src/', '')
+		out_path = os.path.join(out_dir, csv_fn)
+		
+		df.to_csv(out_path)
+		print('\nExtracted data was exported to {fn}'.format(fn = out_path))
 
 	def extract_data(self):
 		self.compose_labelboxes()
@@ -352,8 +363,8 @@ class PlotOCR(OCR):
 		return self.work_image
 
 class LegendOCR(OCR):
-	def __init__(self, image, scale_factor, debug_mode):
-		super(LegendOCR, self).__init__(image, scale_factor, debug_mode)
+	def __init__(self, image, lang, scale_factor, debug_mode):
+		super(LegendOCR, self).__init__(image, lang, scale_factor, debug_mode)
 		
 		_, self.work_image = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
 		erosion_kernel = np.ones((1,1), np.uint8)
