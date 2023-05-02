@@ -13,7 +13,7 @@ A `python` software for materiality matrices extraction.
 ## Description
 This `python` software can be used to extract data from block-form materiality matrices, like the one that follows.
 
-![image](amadori2.png)
+![image](src/amadori2.png)
 
 The software follows 5 different passes:
 1. [Plot/legend subdivision](#1-plotlegend-subdivision)

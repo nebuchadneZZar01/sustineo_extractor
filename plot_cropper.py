@@ -1,15 +1,14 @@
 import cv2
 import numpy as np
-from scipy.spatial import distance
 import sys
 
 class Cropper:
-    def __init__(self, template, image, debug_mode = False, scale_factor = float):
+    def __init__(self, image, debug_mode = False, scale_factor = float):
         self.image = image
         self.image_size = self.image.shape[0:2]
         self.image_size = self.image_size[::-1]             
         self.image_gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
-        self.template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+        # self.template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
         _, self.work_image = cv2.threshold(self.image_gray, 180, 255, cv2.THRESH_BINARY)
 
         # used in the template matching
