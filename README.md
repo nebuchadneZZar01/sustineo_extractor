@@ -71,7 +71,7 @@ The collected data are gathered in a `pandas` **dataframe** and then exported in
 After ensuring that Python $\geq$ 3.10 is installed on your personal environment (*GNU/Linux*, *Windows*, *MacOS*), install the required modules through the command:
 
 ```
-pip install opencv-python pytesseract
+pip install -r requirements.txt
 ```
 
 Then, make a `git clone` of this repository or simply download it.
