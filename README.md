@@ -80,7 +80,7 @@ sudo apt install tesseract-oct -y
 After ensuring that Python $\geq$ 3.10 is installed on your personal environment, install the required modules through the command:
 
 ```
-pip install opencv-python pytesseract
+pip install -r requirements.txt
 ```
 
 Then, make a `git clone` of this repository or simply download it.
