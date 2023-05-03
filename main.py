@@ -17,14 +17,23 @@ def main(image_dir, language, scale_visualization, debug_mode):
     m = Cropper(image, debug_mode, scale_visualization)
     plot, legend = m.separate_image()
 
-    ocr = PlotOCR(plot, image_dir, scale_visualization, debug_mode)
+    print('--- PLOT LOG ---')
+
+    ocr = PlotOCR(plot, image_dir, language, scale_visualization, debug_mode)
     ocr.process_text()
     ocr.extract_data()
 
+    plot_col = ocr.get_colors()
+    
+    print('--- LEGEND LOG ---')
+
     leg = LegendOCR(legend, language, scale_visualization, debug_mode)
+    leg.process_text()
+    leg.get_colors_position(plot_col)
 
     if debug_mode:
         ocr.show_image()
+        leg.show_image()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='sustineo_extractor',

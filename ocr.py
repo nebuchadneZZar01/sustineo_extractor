@@ -7,7 +7,7 @@ from plot_elements import *
 from pytesseract import pytesseract as pt
 
 class OCR:
-	def __init__(self, image, lang = str, scale_factor = float, debug_mode = False):
+	def __init__(self, image, lang = str, scale_factor = float, debug_mode = bool):
 		self.image = image
 		self.debug_mode = debug_mode
 		self.lang = lang						# language of the labels
@@ -30,7 +30,7 @@ class OCR:
 		pass
 
 class PlotOCR(OCR):
-	def __init__(self, image, image_fn, lang = str, scale_factor = float, debug_mode = False):
+	def __init__(self, image, image_fn, lang = str, scale_factor = float, debug_mode = bool):
 		super(PlotOCR, self).__init__(image, lang, scale_factor, debug_mode)
 		self.image_fn = image_fn
 
@@ -48,7 +48,7 @@ class PlotOCR(OCR):
 
 		# we need to dilate the image in order to remove the lines
 		# otherwise, the boxes crossed by the line won't be detected
-		dilate_kernel = np.ones((2,2), np.uint8)
+		dilate_kernel = np.ones((3,3), np.uint8)
 		dilated_shapes = cv2.dilate(shapes, dilate_kernel)
 
 		if self.debug_mode:
@@ -180,7 +180,7 @@ class PlotOCR(OCR):
 	def process_text(self):
 		self.extract_labels()
 
-		res = pt.image_to_data(self.work_image, lang='ita', output_type = pt.Output.DICT)
+		res = pt.image_to_data(self.work_image, lang=self.lang, output_type = pt.Output.DICT)
 		res = pd.DataFrame(res)
 		res = res.loc[res['conf'] != -1]
 
@@ -362,13 +362,23 @@ class PlotOCR(OCR):
 	def get_image_work(self):
 		return self.work_image
 
+	def get_colors(self):
+		colors = []
+
+		for lb in self.labelboxes:
+			if lb.color not in colors:
+				colors.append(lb.color)
+
+		return colors
+
+
 class LegendOCR(OCR):
 	def __init__(self, image, lang, scale_factor, debug_mode):
 		super(LegendOCR, self).__init__(image, lang, scale_factor, debug_mode)
 		
 		_, self.work_image = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
-		erosion_kernel = np.ones((1,1), np.uint8)
-		self.work_image = cv2.dilate(self.work_image, erosion_kernel)
+		# dilatation_kernel = np.ones((1,1), np.uint8)
+		# self.work_image = cv2.dilate(self.work_image, erosion_kernel)
 
 		if debug_mode:
 			tmp = cv2.resize(self.work_image, self.scale_size)
@@ -386,3 +396,61 @@ class LegendOCR(OCR):
 				continue
 
 			approx = cv2.approxPolyDP(contour, 0.01 * cv2.arcLength(contour, True), True)
+
+	def process_text(self):
+		res = pt.image_to_data(self.work_image, lang=self.lang, output_type = pt.Output.DICT)
+		res = pd.DataFrame(res)
+		res = res.loc[res['conf'] != -1]
+
+		self.textboxes = []
+
+		for i in range(0, len(res)):
+			# extract the bounding box coordinates of the text region from
+			# the current result
+			x = res.iloc[i]['left']
+			y = res.iloc[i]['top']
+			w = res.iloc[i]['width']
+			h = res.iloc[i]['height']
+			# extract the OCR text itself along with the confidence of the
+			# text localization
+			text = res.iloc[i]['text']
+			conf = int(res.iloc[i]['conf'])
+
+			if conf > 80:
+				text = "".join([c if ord(c) < 128 else "" for c in text]).strip()
+
+				if len(text) > 0:
+					tb = TextBox((x, y), w, h, text)
+					if self.debug_mode:
+						cv2.rectangle(self.image_debug, (x, y), (x + w, y + h), (255, 0, 0), 2)
+
+					self.textboxes.append(tb)
+
+	def get_colors_position(self, colors):
+		for c in colors:
+			# creates the mask basing on the selected color
+			c_umat = cv2.UMat(np.array(c, dtype=np.uint8))
+			mask = cv2.inRange(self.image, c_umat, c_umat)
+
+			print(mask)
+
+			# finds the points where the mask is not zero
+			points = cv2.findNonZero(mask)
+
+			print(points)
+
+			if points is not None:
+				mean = np.mean(points, axis=0)
+				x, y = (int(mean[0][0]), int(mean[0][1]))
+
+				print('{col} is in position {_x}, {_y}\n'.format(col=c, _x=x, _y=y))
+
+	def show_image(self):
+		scaled_image = cv2.resize(self.image_debug, self.scale_size)
+		scaled_threshold = cv2.resize(self.work_image, self.scale_size)
+		scaled_grayscale = cv2.resize(self.image_gray, self.scale_size)
+		
+		cv2.imshow('legend grayscale', scaled_grayscale)
+		cv2.imshow('legend threshold ocr', scaled_threshold)
+		cv2.imshow('legend ocr', scaled_image)
+		cv2.waitKey(0)
