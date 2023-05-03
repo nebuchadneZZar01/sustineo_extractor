@@ -7,6 +7,7 @@ A `python` software for materiality matrices extraction.
   - [Dependencies](#dependencies)
   - [Installation](#installation)
   - [Execution](#execution)
+  - [Docker](#docker)
 - [Author](#author)
 
 
@@ -63,12 +64,20 @@ The collected data are gathered in a `pandas` **dataframe** and then exported in
 ## Usage
 ### Dependencies
 - Python 3.10
-- `opencv-python` module
-- `pytesseract`
 - `tesseract-ocr`
+- `opencv-python` module
+- `pytesseract` module
 
 ### Installation
-After ensuring that Python $\geq$ 3.10 is installed on your personal environment (*GNU/Linux*, *Windows*, *MacOS*), install the required modules through the command:
+At first, you need to install the `tesseract-ocr` package, using the package manager of your distribution.\
+Example with Debian:
+
+```
+sudo apt install tesseract-oct -y
+```
+
+
+After ensuring that Python $\geq$ 3.10 is installed on your personal environment, install the required modules through the command:
 
 ```
 pip install opencv-python pytesseract
@@ -99,6 +108,15 @@ options:
                         activate the visualization of the various passes (default=false)
   -s SIZE_FACTOR, --size-factor SIZE_FACTOR
                         if used in debug mode, the image sizes will be divided by the choosen scale factor for a better visualization on lower resolution screens (default=1.5)
+```
+
+### Docker
+If you have Docker installed in your personal environment, in this repo is also provided a `Dockerfile`, making you able to build a docker image of the project, without installing any package.
+
+Simply build the image using the Docker file with the `docker build` command, then run the build using the following command:
+
+```
+docker run -v path/to/project/folder/:/app sustineo-extractor src/input.png
 ```
 
 ## Author
