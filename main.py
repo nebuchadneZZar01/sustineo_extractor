@@ -2,7 +2,7 @@ import argparse
 import os
 import cv2
 from ocr import *
-from plot_cropper import Cropper 
+from plot_cropper import Cropper
 
 def main(image_dir, language, scale_visualization, debug_mode):
     image = cv2.imread(image_dir)
@@ -13,7 +13,7 @@ def main(image_dir, language, scale_visualization, debug_mode):
     if debug_mode:
         cv2.imshow('original', image_scaled)
         cv2.waitKey(0)
-    
+
     m = Cropper(image, debug_mode, scale_visualization)
     plot, legend = m.separate_image()
 
@@ -23,8 +23,8 @@ def main(image_dir, language, scale_visualization, debug_mode):
     ocr.process_text()
     ocr.extract_data()
 
-    plot_col = ocr.get_colors()
-    
+    plot_col = ocr.get_colors_hsv()
+
     print('--- LEGEND LOG ---')
 
     leg = LegendOCR(legend, language, scale_visualization, debug_mode)

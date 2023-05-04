@@ -269,8 +269,10 @@ class PlotOCR(OCR):
 	# composes the labelboxes verifying if the
 	# text is actually in that box
 	def compose_labelboxes(self):
+		image_hsv = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
 		for lb in self.labelboxes:
-			lb.set_color(self.image[lb.get_position()[1]+2, lb.get_position()[0]+2])
+			lb.set_color_rgb(self.image[lb.get_position()[1]+2, lb.get_position()[0]+2])
+			lb.set_color_hsv(image_hsv[lb.get_position()[1]+2, lb.get_position()[0]+2])
 			for tb in self.textboxes:
 				lb.add_text_in_label(tb)
 
@@ -324,9 +326,9 @@ class PlotOCR(OCR):
 		for lb in self.labelboxes:
 			group_value = self.renormalize_x_group(lb.get_center()[0], 0, 300)
 			stake_value = self.renormalize_y_stake(lb.get_center()[1], 0, 300)
-			self.datas.append((lb.label, group_value, stake_value, lb.color))
+			self.datas.append((lb.label, group_value, stake_value, lb.color_rgb))
 
-		df = pd.DataFrame(self.datas, columns=('Label', 'GroupRel', 'StakeRel', 'Color'))
+		df = pd.DataFrame(self.datas, columns=('Label', 'GroupRel', 'StakeRel', 'ColorRGB'))
 
 		print('Showing the first rows of the dataset:')
 		print(df.head())
@@ -362,15 +364,33 @@ class PlotOCR(OCR):
 	def get_image_work(self):
 		return self.work_image
 
-	def get_colors(self):
+	def get_colors_rgb(self):
 		colors = []
 
 		for lb in self.labelboxes:
-			if lb.color not in colors:
-				colors.append(lb.color)
+			if lb.color_rgb not in colors:
+				col = []
+				for gr_lev in lb.color_rgb:
+					gr = int(gr_lev)
+					col.append(gr)
+				col = tuple(col)
+				colors.append(col)		
 
 		return colors
 
+	def get_colors_hsv(self):
+		colors = []
+
+		for lb in self.labelboxes:
+			if lb.color_hsv not in colors:
+				col = []
+				for val in lb.color_hsv:
+					val = int(val)
+					col.append(val)
+				col = tuple(col) 
+				colors.append(col)
+		
+		return colors
 
 class LegendOCR(OCR):
 	def __init__(self, image, lang, scale_factor, debug_mode):
@@ -426,24 +446,28 @@ class LegendOCR(OCR):
 
 					self.textboxes.append(tb)
 
-	def get_colors_position(self, colors):
-		for c in colors:
-			# creates the mask basing on the selected color
-			c_umat = cv2.UMat(np.array(c, dtype=np.uint8))
-			mask = cv2.inRange(self.image, c_umat, c_umat)
+	# using hsv color-space, it calls inRange()
+	# function to detect color position
+	def get_colors_position(self, colors_hsv):
+		i = 1
+		for c in colors_hsv:
+			image_hsv = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
 
-			print(mask)
+			mask = cv2.inRange(image_hsv, c, c)
+
+			if self.debug_mode:
+				cv2.imshow('hsv', image_hsv)
+				cv2.imshow('mask {n}'.format(n=i), mask)
+				i += 1
 
 			# finds the points where the mask is not zero
 			points = cv2.findNonZero(mask)
-
-			print(points)
 
 			if points is not None:
 				mean = np.mean(points, axis=0)
 				x, y = (int(mean[0][0]), int(mean[0][1]))
 
-				print('{col} is in position {_x}, {_y}\n'.format(col=c, _x=x, _y=y))
+				print('{col} is in position ({_x}, {_y})\n'.format(col=c, _x=x, _y=y))
 
 	def show_image(self):
 		scaled_image = cv2.resize(self.image_debug, self.scale_size)

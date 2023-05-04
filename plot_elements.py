@@ -9,6 +9,13 @@ class Box:
 
         self.center = (int((self.top_left[0] + self.bottom_right[0])/2), int((self.top_left[1] + self.bottom_right[1])/2)) 
 
+    # computes the distance between
+    # the center and a point
+    def distance_from_point(self, point):
+        dist = sqrt((point[0] - self.center[0])**2 + (point[1] - self.center[1])**2)
+
+        return dist
+
     def get_position(self):
         return self.top_left
 
@@ -50,7 +57,8 @@ class LabelBox(Box):
     def __init__(self, top_left, bottom_right):
         super(LabelBox, self).__init__(top_left, bottom_right)
         self.label = ''
-        self.color = None                                  # background color of the box
+        self.color_rgb = None                                  # background color of the box
+        self.color_hsv = None                                  # used to detect the color range
     
     # cuncatenate the word to the actual label if its 
     # bounding box is contained in the label box
@@ -60,11 +68,17 @@ class LabelBox(Box):
         else:
             pass
 
-    def set_color(self, color_bgr):
-        self.color = tuple(color_bgr[::-1])
+    def set_color_hsv(self, color_hsv):
+        self.color_hsv = tuple(color_hsv)
 
-    def get_color(self):
-        return self.color
+    def set_color_rgb(self, color_bgr):
+        self.color_rgb = tuple(color_bgr[::-1])
+
+    def get_color_rgb(self):
+        return self.color_rgb
+
+    def get_color_hsv(self):
+        return self.color_hsv
 
     def get_label(self):
         return self.label
