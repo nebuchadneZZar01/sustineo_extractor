@@ -73,7 +73,7 @@ At first, you need to install the `tesseract-ocr` package, using the package man
 Example with Debian:
 
 ```
-sudo apt install tesseract-oct -y
+sudo apt install tesseract-ocr -y
 ```
 
 
