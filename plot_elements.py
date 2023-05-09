@@ -1,3 +1,5 @@
+from numpy import sqrt
+
 # defines rectangular boxes (containing labels)
 # in the plot
 class Box:
@@ -12,7 +14,7 @@ class Box:
     # computes the distance between
     # the center and a point
     def distance_from_point(self, point):
-        dist = sqrt((point[0] - self.center[0])**2 + (point[1] - self.center[1])**2)
+        dist = sqrt((point[0] - self.top_left[0])**2 + (point[1] - self.top_left[1])**2)
 
         return dist
 
@@ -38,6 +40,8 @@ class TextBox(Box):
         self.height = height
         self.text = text
 
+        self.top_right = (self.bottom_right[0], self.top_left[1])
+
     def get_text(self):
         return self.text
 
@@ -49,6 +53,11 @@ class TextBox(Box):
                 return True
         else: 
             return False
+
+    def distance_from_textbox(self, box = Box):
+        dist = sqrt((box.top_left[0] - self.top_right[0])**2 + (box.top_left[1] - self.top_right[1])**2)
+
+        return dist
 
 # defines the labelboxes containing
 # all the single words and forming

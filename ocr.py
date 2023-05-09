@@ -397,6 +397,7 @@ class LegendOCR(OCR):
 		super(LegendOCR, self).__init__(image, lang, scale_factor, debug_mode)
 		
 		_, self.work_image = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
+		self.colors_pos = []
 		# dilatation_kernel = np.ones((1,1), np.uint8)
 		# self.work_image = cv2.dilate(self.work_image, erosion_kernel)
 
@@ -468,6 +469,34 @@ class LegendOCR(OCR):
 				x, y = (int(mean[0][0]), int(mean[0][1]))
 
 				print('{col} is in position ({_x}, {_y})\n'.format(col=c, _x=x, _y=y))
+				self.colors_pos.append((x, y))
+
+	def process_legend(self):
+		label = self.textboxes[0].text
+		for i in range(len(self.textboxes)):
+			if i == len(self.textboxes)-1: break
+			else:
+				if self.textboxes[i].distance_from_textbox(self.textboxes[i+1]) < 15:
+					label += ' ' + self.textboxes[i+1].text
+				else:
+					label += '\n' + self.textboxes[i+1].text
+
+		legends_labels = label.split('\n')
+		print(legends_labels)
+
+		# take the first word of every level
+		# and compute the distance between it
+		# and the colored square: if it's lower
+		# than a certain threshold, the square is
+		# linked to the label via a LegendBox (to-do)
+		for lb in legends_labels:
+			for tb in self.textboxes:
+				if lb.split(' ')[0] == tb.text:
+					tmp_tb = tb		
+					for c_pos in self.colors_pos:
+						print(tb.distance_from_point(c_pos))
+						if tb.distance_from_point(c_pos) < 15:
+							print('test ok')					
 
 	def show_image(self):
 		scaled_image = cv2.resize(self.image_debug, self.scale_size)

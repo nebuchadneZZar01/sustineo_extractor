@@ -30,6 +30,7 @@ def main(image_dir, language, scale_visualization, debug_mode):
     leg = LegendOCR(legend, language, scale_visualization, debug_mode)
     leg.process_text()
     leg.get_colors_position(plot_col)
+    leg.process_legend()
 
     if debug_mode:
         ocr.show_image()
