@@ -1,15 +1,15 @@
-,Label,GroupRel,StakeRel,ColorRGB
-0,Protezione della privacy,0.0,0.0,"(215, 224, 180)"
-1,Educazione e sensibilizzazione del consumatore,82.84734133790738,44.6629213483146,"(215, 224, 180)"
-2,Emissioni in atmosfera,163.63636363636363,51.82584269662922,"(243, 225, 172)"
-3,Diversit e inclusione,27.015437392795885,90.58988764044943,"(232, 177, 154)"
-4,Tutela del suolo e della biodiversit,20.840480274442537,118.82022471910113,"(243, 225, 172)"
-5,Centralit e benessere del dipendente,169.81132075471697,154.2134831460674,"(232, 177, 154)"
-6,Sviluppo professionale dei dipendenti,130.96054888507717,108.2865168539326,"(232, 177, 154)"
-7,Benessere degli animali,280.4459691252144,173.1741573033708,"(215, 224, 180)"
-8,"Trasparenza, tracciabilit e circolarit della filiera",262.43567753001713,145.7865168539326,"(215, 224, 180)"
-9,"Economia circolare, valorizzazione scarti e gestione rifiuti",300.0,224.1573033707865,"(243, 225, 172)"
-10,Gestione della risorse idriche,143.82504288164665,243.11797752808988,"(243, 225, 172)"
-11,Qualit del prodotto e attenzione al consumatore,290.99485420240137,262.07865168539325,"(215, 224, 180)"
-12,Salute e sicurezza dei lavoratori,180.87478559176674,295.36516853932585,"(232, 177, 154)"
-13,Efficientamento energetico e lotta al cambiamento climatico,271.6981132075472,300.0,"(243, 225, 172)"
+,Label,GroupRel,StakeRel,Kind
+0,Protezione della privacy,0.0,0.0,
+1,Educazione e sensibilizzazione del consumatore,82.84734133790738,44.6629213483146,
+2,Emissioni in atmosfera,163.63636363636363,51.82584269662922,
+3,Diversit e inclusione,27.015437392795885,90.58988764044943,Persone
+4,Tutela del suolo e della biodiversit,20.840480274442537,118.82022471910113,
+5,Centralit e benessere del dipendente,169.81132075471697,154.2134831460674,Persone
+6,Sviluppo professionale dei dipendenti,130.96054888507717,108.2865168539326,Persone
+7,Benessere degli animali,280.4459691252144,173.1741573033708,
+8,"Trasparenza, tracciabilit e circolarit della filiera",262.43567753001713,145.7865168539326,
+9,"Economia circolare, valorizzazione scarti e gestione rifiuti",300.0,224.1573033707865,
+10,Gestione della risorse idriche,143.82504288164665,243.11797752808988,
+11,Qualit del prodotto e attenzione al consumatore,290.99485420240137,262.07865168539325,
+12,Salute e sicurezza dei lavoratori,180.87478559176674,295.36516853932585,Persone
+13,Efficientamento energetico e lotta al cambiamento climatico,271.6981132075472,300.0,

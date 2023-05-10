@@ -14,7 +14,7 @@ class Box:
     # computes the distance between
     # the center and a point
     def distance_from_point(self, point):
-        dist = sqrt((point[0] - self.top_left[0])**2 + (point[1] - self.top_left[1])**2)
+        dist = sqrt((self.top_left[0] - point[0])**2 + (self.top_left[1] - point[1])**2)
 
         return dist
 
@@ -91,3 +91,24 @@ class LabelBox(Box):
 
     def get_label(self):
         return self.label
+
+# defines the block containing a legend label
+# with its color, its label and starting from
+# the upper-left vertex
+class LegendBox(Box):
+    def __init__(self, top_left):
+        super(LegendBox, self).__init__(top_left, bottom_right = (0,0))
+        self.label = ''
+        self.color = None
+
+    def set_label(self, label):
+        self.label = label
+
+    def set_color(self, color):
+        self.color = color
+
+    def get_label(self):
+        return self.label
+
+    def get_color(self):
+        return self.color

@@ -7,8 +7,9 @@ from plot_elements import *
 from pytesseract import pytesseract as pt
 
 class OCR:
-	def __init__(self, image, lang = str, scale_factor = float, debug_mode = bool):
+	def __init__(self, image, image_fn, lang = str, scale_factor = float, debug_mode = bool):
 		self.image = image
+		self.image_fn = image_fn
 		self.debug_mode = debug_mode
 		self.lang = lang						# language of the labels
 
@@ -31,13 +32,9 @@ class OCR:
 
 class PlotOCR(OCR):
 	def __init__(self, image, image_fn, lang = str, scale_factor = float, debug_mode = bool):
-		super(PlotOCR, self).__init__(image, lang, scale_factor, debug_mode)
-		self.image_fn = image_fn
-
+		super(PlotOCR, self).__init__(image, image_fn, lang, scale_factor, debug_mode)
 		self.labelboxes = []				# will contain the bounding boxes of the entire labels
 		self.textboxes = []					# will contain the bounding boxes of every single word
-
-		self.datas = [ ]					# will contain the actually extracted data, which will then exported to a csv file
 
 		_, self.work_image = cv2.threshold(self.image_gray, 185, 255, cv2.THRESH_BINARY)
 		
@@ -278,30 +275,6 @@ class PlotOCR(OCR):
 
 		self.verify_labelboxes()
 
-	def renormalize_x_group(self, value, norm_min, norm_max):
-		x_values = [lb.get_center()[0] for lb in self.labelboxes]
-
-		min_x = min(x_values)
-		max_x = max(x_values)
-
-		norm_value = (norm_max - norm_min) * (value - min_x)/(max_x - min_x) 
-
-		return norm_value
-
-	def renormalize_y_stake(self, value, norm_min, norm_max):
-		y_values = [lb.get_center()[1] for lb in self.labelboxes]
-
-		min_y = min(y_values)
-		max_y = max(y_values)
-
-		norm_value = (norm_max - norm_min) * (value - min_y)/(max_y - min_y) 
-
-		norm_value -= norm_max
-		if norm_value < 0:
-			norm_value *= -1
-	
-		return norm_value
-
 	# deletes all blank labelboxes
 	def verify_labelboxes(self):
 		for lb in self.labelboxes.copy():
@@ -319,36 +292,14 @@ class PlotOCR(OCR):
 																								center = lb.get_center()))
 			if self.debug_mode:
 				cv2.circle(self.image_debug, lb.get_center(), 5, (0, 0, 255), 5)
-
-	# function that makes a pandas dataframe
-	# containing the extracted data
-	def construct_dataset(self):
-		for lb in self.labelboxes:
-			group_value = self.renormalize_x_group(lb.get_center()[0], 0, 300)
-			stake_value = self.renormalize_y_stake(lb.get_center()[1], 0, 300)
-			self.datas.append((lb.label, group_value, stake_value, lb.color_rgb))
-
-		df = pd.DataFrame(self.datas, columns=('Label', 'GroupRel', 'StakeRel', 'ColorRGB'))
-
-		print('Showing the first rows of the dataset:')
-		print(df.head())
-		
-		img_extension = self.image_fn[-3:len(self.image_fn)]
-
-		out_dir = os.path.join('out')
-
-		if not os.path.isdir(out_dir):
-			os.mkdir(out_dir)
-
-		csv_fn = self.image_fn.replace(img_extension, 'csv').replace('src/', '')
-		out_path = os.path.join(out_dir, csv_fn)
-		
-		df.to_csv(out_path)
-		print('\nExtracted data was exported to {fn}'.format(fn = out_path))
+	
+	def get_labelboxes(self):
+		return self.labelboxes
 
 	def extract_data(self):
 		self.compose_labelboxes()
-		self.construct_dataset()
+		
+		return self.get_labelboxes()
 
 	# used in debug mode for the visualization
 	def show_image(self):
@@ -393,13 +344,14 @@ class PlotOCR(OCR):
 		return colors
 
 class LegendOCR(OCR):
-	def __init__(self, image, lang, scale_factor, debug_mode):
-		super(LegendOCR, self).__init__(image, lang, scale_factor, debug_mode)
+	def __init__(self, image, image_fn, labelboxes, lang, scale_factor, debug_mode):
+		super(LegendOCR, self).__init__(image, image_fn, lang, scale_factor, debug_mode)
 		
 		_, self.work_image = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
 		self.colors_pos = []
 		# dilatation_kernel = np.ones((1,1), np.uint8)
 		# self.work_image = cv2.dilate(self.work_image, erosion_kernel)
+		self.labelboxes = labelboxes
 
 		if debug_mode:
 			tmp = cv2.resize(self.work_image, self.scale_size)
@@ -468,8 +420,11 @@ class LegendOCR(OCR):
 				mean = np.mean(points, axis=0)
 				x, y = (int(mean[0][0]), int(mean[0][1]))
 
-				print('{col} is in position ({_x}, {_y})\n'.format(col=c, _x=x, _y=y))
-				self.colors_pos.append((x, y))
+				# taking rgb color
+				c_rgb = tuple(self.image[y][x])[::-1]
+
+				#print('{col} is in position ({_x}, {_y})\n'.format(col=c_rgb, _x=x, _y=y))
+				self.colors_pos.append(((x, y), (c_rgb)))
 
 	def process_legend(self):
 		label = self.textboxes[0].text
@@ -482,21 +437,89 @@ class LegendOCR(OCR):
 					label += '\n' + self.textboxes[i+1].text
 
 		legends_labels = label.split('\n')
-		print(legends_labels)
+		# print(legends_labels)
 
 		# take the first word of every level
 		# and compute the distance between it
 		# and the colored square: if it's lower
 		# than a certain threshold, the square is
 		# linked to the label via a LegendBox (to-do)
+
+		self.legend_boxes = []
+
 		for lb in legends_labels:
 			for tb in self.textboxes:
 				if lb.split(' ')[0] == tb.text:
 					tmp_tb = tb		
-					for c_pos in self.colors_pos:
-						print(tb.distance_from_point(c_pos))
-						if tb.distance_from_point(c_pos) < 15:
-							print('test ok')					
+					for c in self.colors_pos:
+						c_pos = c[0]
+						c_col = c[1]
+						if tb.distance_from_point(c_pos) < 40:
+							legend_box = LegendBox(c_pos)
+							legend_box.set_color(c_col)
+							legend_box.set_label(lb)
+							self.legend_boxes.append(legend_box)
+		
+		print("Extracted labels from legend:")
+		for lb in self.legend_boxes:
+			print("label: {l}\ncolor: {c}\n".format(l = lb.get_label(), c = lb.get_color()))
+
+	def renormalize_x_group(self, value, norm_min, norm_max):
+		x_values = [lb.get_center()[0] for lb in self.labelboxes]
+
+		min_x = min(x_values)
+		max_x = max(x_values)
+
+		norm_value = (norm_max - norm_min) * (value - min_x)/(max_x - min_x) 
+
+		return norm_value
+
+	def renormalize_y_stake(self, value, norm_min, norm_max):
+		y_values = [lb.get_center()[1] for lb in self.labelboxes]
+
+		min_y = min(y_values)
+		max_y = max(y_values)
+
+		norm_value = (norm_max - norm_min) * (value - min_y)/(max_y - min_y) 
+
+		norm_value -= norm_max
+		if norm_value < 0:
+			norm_value *= -1
+	
+		return norm_value
+
+	# function that makes a pandas dataframe
+	# containing the extracted data
+	def construct_dataset(self):
+		datas = []
+
+		for lb in self.labelboxes:
+			kind = None
+			for legb in self.legend_boxes:
+				if legb.get_color() == lb.color_rgb:
+					kind = legb.get_label()
+			group_value = self.renormalize_x_group(lb.get_center()[0], 0, 300)
+			stake_value = self.renormalize_y_stake(lb.get_center()[1], 0, 300)
+			
+			datas.append((lb.label, group_value, stake_value, kind))
+
+		df = pd.DataFrame(datas, columns=('Label', 'GroupRel', 'StakeRel', 'Kind'))
+
+		print('Showing the first rows of the dataset:')
+		print(df.head())
+		
+		img_extension = self.image_fn[-3:len(self.image_fn)]
+
+		out_dir = os.path.join('out')
+
+		if not os.path.isdir(out_dir):
+			os.mkdir(out_dir)
+
+		csv_fn = self.image_fn.replace(img_extension, 'csv').replace('src/', '')
+		out_path = os.path.join(out_dir, csv_fn)
+		
+		df.to_csv(out_path)
+		print('\nExtracted data was exported to {fn}'.format(fn = out_path))
 
 	def show_image(self):
 		scaled_image = cv2.resize(self.image_debug, self.scale_size)

@@ -21,16 +21,17 @@ def main(image_dir, language, scale_visualization, debug_mode):
 
     ocr = PlotOCR(plot, image_dir, language, scale_visualization, debug_mode)
     ocr.process_text()
-    ocr.extract_data()
 
+    labelboxes = ocr.extract_data()
     plot_col = ocr.get_colors_hsv()
 
     print('--- LEGEND LOG ---')
 
-    leg = LegendOCR(legend, language, scale_visualization, debug_mode)
+    leg = LegendOCR(legend, image_dir, labelboxes, language, scale_visualization, debug_mode)
     leg.process_text()
     leg.get_colors_position(plot_col)
     leg.process_legend()
+    leg.construct_dataset()
 
     if debug_mode:
         ocr.show_image()
