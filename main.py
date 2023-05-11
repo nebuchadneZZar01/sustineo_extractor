@@ -3,6 +3,7 @@ import os
 import cv2
 from ocr import *
 from plot_cropper import Cropper
+from exporter import Exporter
 
 def main(image_dir, language, scale_visualization, debug_mode):
     image = cv2.imread(image_dir)
@@ -19,19 +20,23 @@ def main(image_dir, language, scale_visualization, debug_mode):
 
     print('--- PLOT LOG ---')
 
-    ocr = PlotOCR(plot, image_dir, language, scale_visualization, debug_mode)
+    ocr = PlotOCR(plot, language, scale_visualization, debug_mode)
     ocr.process_text()
+    ocr.compose_labelboxes()
 
-    labelboxes = ocr.extract_data()
+    labelboxes = ocr.get_data()
     plot_col = ocr.get_colors_hsv()
 
     print('--- LEGEND LOG ---')
 
-    leg = LegendOCR(legend, image_dir, labelboxes, language, scale_visualization, debug_mode)
+    leg = LegendOCR(legend, labelboxes, language, scale_visualization, debug_mode)
     leg.process_text()
     leg.get_colors_position(plot_col)
     leg.process_legend()
-    leg.construct_dataset()
+    legendboxes = leg.get_data()
+
+    ex = Exporter(image_dir, labelboxes, legendboxes)
+    ex.construct_dataset()
 
     if debug_mode:
         ocr.show_image()

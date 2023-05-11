@@ -1,71 +1,43 @@
 import cv2
 import numpy as np
-import sys
 
+# object class that crops the image, returning
+# the plot-part and the legend-part in order to
+# later manipulate them separately 
 class Cropper:
     def __init__(self, image, debug_mode = False, scale_factor = float):
-        self.image = image
-        self.image_size = self.image.shape[0:2]
-        self.image_size = self.image_size[::-1]             
-        self.image_gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
-        # self.template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-        _, self.work_image = cv2.threshold(self.image_gray, 180, 255, cv2.THRESH_BINARY)
+        self.__image = image
+        self.__image_size = image.shape[0:2]
+        self.__image_size = self.image_size[::-1]      
 
-        # used in the template matching
-        self.rotation = [0, 90]
+        self.__image_gray = cv2.cvtColor(self.__image, cv2.COLOR_BGR2GRAY)
+        _, self.__work_image = cv2.threshold(self.__image_gray, 180, 255, cv2.THRESH_BINARY)
 
-        self.debug_mode = debug_mode
-        if self.debug_mode:
-            self.scale_size = (int(self.image_size[0]/scale_factor), int(self.image_size[1]/scale_factor))
-            self.image_debug = self.image.copy()
+        self.__debug_mode = debug_mode
+        
+        if self.__debug_mode:
+            self.__scale_size = (int(self.image_size[0]/scale_factor), int(self.image_size[1]/scale_factor))
+            self.__image_debug = self.image.copy()
 
-            self.scale_factor = scale_factor
+            self.__scale_factor = scale_factor
 
-            tmp = cv2.resize(self.work_image, self.scale_size)
+            tmp = cv2.resize(self.__work_image, self.__scale_size)
 
             cv2.imshow('threshold', tmp)
             cv2.waitKey(0)
-    
-    # ---- TEMPLATE MATCHING PART (MAYBE WILL DELETE) ----
-    # finds the arrow template
-    def find_template(self):
-        shape = self.template.shape
-        w, h = shape[::-1]
-        top_left = 0
-        bottom_right = 0
-        # scans every angle of rotation
-        for i in range(len(self.rotation)):
-            if self.rotation[i] == 0:
-                template_rot = self.template
-            elif self.rotation[i]:
-                template_rot = cv2.rotate(self.template, cv2.ROTATE_90_CLOCKWISE)
 
-            cv2.imshow('rotated', template_rot)
-
-            res = cv2.matchTemplate(self.image_gray, template_rot, cv2.TM_CCOEFF_NORMED)
-            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-
-            top_left_tmp = max_loc
-            if self.rotation[i] == 0:
-                bottom_right_tmp = (top_left_tmp[0] + w, top_left_tmp[1] + h)
-                top_left = top_left_tmp
-            elif self.rotation[i] == 90:
-                bottom_right_tmp = (top_left_tmp[0] + h, top_left_tmp[1] + w)
-                bottom_right = bottom_right_tmp
-
-            # cv2.rectangle(self.image, top_left_tmp, bottom_right_tmp, (0,0,255), 2)
-
-        return top_left, bottom_right
-    # ---- END TEMPLATE MATCHING PART ----
+    @property
+    def image_size(self):
+        return self.__image_size
 
     # finds all the blocks composing the plot
     # using the Hough transform
     def find_delimiters(self):
-        edges = cv2.Canny(self.work_image, 50, 150, apertureSize=3)
+        edges = cv2.Canny(self.__work_image, 50, 150, apertureSize=3)
         lines = cv2.HoughLines(edges, 1, np.pi/180, 350)
 
-        self.rows = []
-        self.columns = []
+        self.__rows = []
+        self.__columns = []
 
         if lines is not None:
             for r_theta in lines:
@@ -87,15 +59,15 @@ class Cropper:
                 y2 = int(y0 - line_len*(a))
                                 
                 if r_theta[0][1] == 0:
-                    self.rows.append(int(r_theta[0][0]))
+                    self.__rows.append(int(r_theta[0][0]))
                 else:
-                    self.columns.append(int(r_theta[0][0]))
+                    self.__columns.append(int(r_theta[0][0]))
 
-                if self.debug_mode:
-                    cv2.line(self.image_debug, (x1, y1), (x2, y2), (0, 0, 255), 2)
+                if self.__debug_mode:
+                    cv2.line(self.__image_debug, (x1, y1), (x2, y2), (0, 0, 255), 2)
         
-        if self.debug_mode:
-            tmp = cv2.resize(self.image_debug, self.scale_size)
+        if self.__debug_mode:
+            tmp = cv2.resize(self.__image_debug, self.__scale_size)
 
             cv2.imshow('lines detected', tmp)
             cv2.waitKey(0)
@@ -104,13 +76,13 @@ class Cropper:
     # in order to detect the vertices that defines
     # the blocks composing the plot
     def find_intersections(self):
-        tups = [(r, c) for r in self.rows for c in self.columns]
+        tups = [(r, c) for r in self.__rows for c in self.__columns]
         
-        if self.debug_mode:
+        if self.__debug_mode:
             for t in tups:
-                cv2.circle(self.image_debug, t, 3, (255, 0, 0), 3)
+                cv2.circle(self.__image_debug, t, 3, (255, 0, 0), 3)
 
-            tmp = cv2.resize(self.image_debug, self.scale_size)
+            tmp = cv2.resize(self.__image_debug, self.__scale_size)
 
             cv2.imshow('intersections', tmp)
             cv2.waitKey(0)
@@ -120,23 +92,23 @@ class Cropper:
     def find_plot(self):
         self.find_delimiters()
         self.find_intersections()
-        self.rows.sort()
-        self.columns.sort(reverse=True)
+        self.__rows.sort()
+        self.__columns.sort(reverse=True)
 
         # LITTLE RECTANGLE IN THE PLOT
         # vertices delimiting the rectangle
-        l_bottom_left = (self.rows[0], self.columns[0])
-        l_bottom_right = (self.rows[2], self.columns[0])
-        l_top_left = (self.rows[0], self.columns[3])
+        l_bottom_left = (self.__rows[0], self.__columns[0])
+        l_bottom_right = (self.__rows[2], self.__columns[0])
+        l_top_left = (self.__rows[0], self.__columns[3])
 
         # size of the rectangle's edges
         l_w = l_bottom_right[0] - l_bottom_left[0]
         l_h = l_bottom_left[1] - l_top_left[1]
 
-        if self.debug_mode:
-            cv2.circle(self.image_debug, l_bottom_left, 3, (0, 255, 0), 3)
-            cv2.circle(self.image_debug, l_bottom_right, 3, (0, 255, 0), 3)
-            cv2.circle(self.image_debug, l_top_left, 3, (0, 255, 0), 3)
+        if self.__debug_mode:
+            cv2.circle(self.__image_debug, l_bottom_left, 3, (0, 255, 0), 3)
+            cv2.circle(self.__image_debug, l_bottom_right, 3, (0, 255, 0), 3)
+            cv2.circle(self.__image_debug, l_top_left, 3, (0, 255, 0), 3)
 
         # BIG RECTANGLE (THE PLOT)
         # size of the rectangle's edges
@@ -150,12 +122,12 @@ class Cropper:
         b_top_left = (l_bottom_left[0], l_bottom_left[1] - b_h) if (l_bottom_left[1] - b_h) > 0 else (l_bottom_left[0], 0)
         b_bottom_right = (l_bottom_left[0] + b_w, l_bottom_left[1]) if (l_bottom_left[0] + b_w < self.image_size[0]) else (self.image_size[0], l_bottom_left[1])
 
-        if self.debug_mode:
-            cv2.circle(self.image_debug, b_bottom_left, 3, (255, 255, 0), 3)
-            cv2.circle(self.image_debug, b_top_left, 3, (255, 255, 0), 3)
-            cv2.circle(self.image_debug, b_bottom_right, 3, (255, 255, 0), 3)
+        if self.__debug_mode:
+            cv2.circle(self.__image_debug, b_bottom_left, 3, (255, 255, 0), 3)
+            cv2.circle(self.__image_debug, b_top_left, 3, (255, 255, 0), 3)
+            cv2.circle(self.__image_debug, b_bottom_right, 3, (255, 255, 0), 3)
 
-            tmp = cv2.resize(self.image_debug, self.scale_size)
+            tmp = cv2.resize(self.__image_debug, self.__scale_size)
             cv2.imshow('plot', tmp)
             cv2.waitKey(0)
         
@@ -168,20 +140,20 @@ class Cropper:
         w = top_left[0] - bottom_right[0] if (top_left[0] - bottom_right[0]) > 0 else -1 * (top_left[0] - bottom_right[0])
         h = bottom_right[1] - top_left[0] if (bottom_right[1] - top_left[0]) > 0 else -1 * (bottom_right[1] - top_left[0])
     
-        plot = self.image[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
+        plot = self.__image[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
 
-        print(self.image_size[0] - w)
+        print(self.__image_size[0] - w)
 
         # if the image has a legend on the left or on the right
         # the legend part will be composed by the intire original
         # image, but with the plot part filled with white
         if (self.image_size[0] - w) > h_offset:
-            legend = self.image.copy()
+            legend = self.__image.copy()
             cv2.rectangle(legend, top_left, bottom_right, (255, 255, 255), -1)
         else:
-            legend = self.image[bottom_right[1]:self.image.shape[1], top_left[0]:bottom_right[0]]
+            legend = self.__image[bottom_right[1]:self.image_size[1], top_left[0]:bottom_right[0]]
 
-        if self.debug_mode:
+        if self.__debug_mode:
             tmp_plot_r_size = (int(plot.shape[1]/self.scale_factor), int(plot.shape[0]/self.scale_factor))
             tmp_leg_r_size = (int(legend.shape[1]/self.scale_factor), int(legend.shape[0]/self.scale_factor))
 
@@ -193,12 +165,3 @@ class Cropper:
             cv2.waitKey(0)
 
         return plot, legend
-
-if __name__ == '__main__':
-    image = cv2.imread('amadori2.png')
-    template = cv2.imread('template.png')
-
-    m = Cropper(template, image)
-    m.find_delimiters()
-    m.find_intersections()
-    m.find_plot()

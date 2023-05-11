@@ -1,28 +1,42 @@
-import os
 import cv2
 import math
 import numpy as np
 import pandas as pd
-from plot_elements import *
+from plot_elements import TextBox, LabelBox, LegendBox
 from pytesseract import pytesseract as pt
 
 class OCR:
-	def __init__(self, image, image_fn, lang = str, scale_factor = float, debug_mode = bool):
-		self.image = image
-		self.image_fn = image_fn
-		self.debug_mode = debug_mode
-		self.lang = lang						# language of the labels
+	def __init__(self, image, lang = str, scale_factor = float, debug_mode = bool):
+		self.__image = image
+		self.__debug_mode = debug_mode
+		self.__lang = lang						# language of the labels
 
-		self.image_gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+		self.__image_gray = cv2.cvtColor(self.__image, cv2.COLOR_BGR2GRAY)
 		
 		# image sizes will be divided by scale factor
 		# to permit a better visualization on lower
 		# resolution screens
 		if debug_mode:
-			self.image_debug = self.image.copy()
-			self.scale_factor = scale_factor if scale_factor != 0.0 else 1.0
+			self.__image_debug = self.__image.copy()
+			self.__scale_factor = scale_factor if scale_factor != 0.0 else 1.0
 			
-			self.scale_size = (int(self.image.shape[1]/self.scale_factor), int(self.image.shape[0]/self.scale_factor))
+			self.__scale_size = (int(self.__image.shape[1]/self.scale_factor), int(self.__image.shape[0]/self.scale_factor))
+
+	@property
+	def image_original(self):
+		return self.__image
+
+	@property
+	def image_gray(self):
+		return self.__image_gray
+
+	@property
+	def debug_mode(self):
+		return self.__debug_mode
+
+	@property
+	def language(self):
+		return self.__lang
 
 	def process_text(self):
 		pass
@@ -30,15 +44,17 @@ class OCR:
 	def show_image(self):
 		pass
 
-class PlotOCR(OCR):
-	def __init__(self, image, image_fn, lang = str, scale_factor = float, debug_mode = bool):
-		super(PlotOCR, self).__init__(image, image_fn, lang, scale_factor, debug_mode)
-		self.labelboxes = []				# will contain the bounding boxes of the entire labels
-		self.textboxes = []					# will contain the bounding boxes of every single word
+	def get_data(self):
+		pass
 
-		_, self.work_image = cv2.threshold(self.image_gray, 185, 255, cv2.THRESH_BINARY)
-		
-		
+class PlotOCR(OCR):
+	def __init__(self, image, lang = str, scale_factor = float, debug_mode = bool):
+		super(PlotOCR, self).__init__(image, lang, scale_factor, debug_mode)
+		self.__labelboxes = []				# will contain the bounding boxes of the entire labels
+		self.__textboxes = []					# will contain the bounding boxes of every single word
+
+		_, self.__work_image = cv2.threshold(self.image_gray, 185, 255, cv2.THRESH_BINARY)
+
 	# function that detects all the rectangles that contain the labels
 	def extract_labels(self):
 		_, shapes = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
@@ -49,7 +65,7 @@ class PlotOCR(OCR):
 		dilated_shapes = cv2.dilate(shapes, dilate_kernel)
 
 		if self.debug_mode:
-			tmp = cv2.resize(dilated_shapes, self.scale_size)
+			tmp = cv2.resize(dilated_shapes, self.__scale_size)
 
 			cv2.imshow('shapes', tmp)
 
@@ -71,12 +87,12 @@ class PlotOCR(OCR):
 					D = approx[2][0]		# bottom right vertex
 
 					lb = LabelBox(A, D)
-					self.labelboxes.append(lb)
+					self.__labelboxes.append(lb)
 					
 					if self.debug_mode:
-						cv2.drawContours(self.image_debug, [contour], 0, (0, 255, 0), 2)
-						cv2.circle(self.image_debug, A, 2, (255, 255, 0), 4)
-						cv2.circle(self.image_debug, D, 2, (255, 255, 0), 4)
+						cv2.drawContours(self.__image_debug, [contour], 0, (0, 255, 0), 2)
+						cv2.circle(self.__image_debug, A, 2, (255, 255, 0), 4)
+						cv2.circle(self.__image_debug, D, 2, (255, 255, 0), 4)
 
 				# merged rectangles
 				elif len(approx) == 8:
@@ -92,30 +108,30 @@ class PlotOCR(OCR):
 
 					# define rect 1
 					lb1 = LabelBox(r1_A, r1_D)
-					self.labelboxes.append(lb1)
+					self.__labelboxes.append(lb1)
 
 					# define rect 2 
 					lb2 = LabelBox(r2_A, r2_D)
-					self.labelboxes.append(lb2)
+					self.__labelboxes.append(lb2)
 
 					if self.debug_mode:
-						cv2.drawContours(self.image_debug, [contour], 0, (0, 0, 255), 2)
+						cv2.drawContours(self.__image_debug, [contour], 0, (0, 0, 255), 2)
 						
 						# draw rect 1
-						cv2.rectangle(self.image_debug, r1_A, r1_D, (0, 255, 0), 3)
+						cv2.rectangle(self.__image_debug, r1_A, r1_D, (0, 255, 0), 3)
 
 						# draw rect 2
-						cv2.rectangle(self.image_debug, r2_A, r2_D, (0, 255, 0), 3)
+						cv2.rectangle(self.__image_debug, r2_A, r2_D, (0, 255, 0), 3)
 
-						cv2.circle(self.image_debug, r1_A, 2, (255, 255, 0), 4)
-						cv2.circle(self.image_debug, r1_B, 2, (255, 255, 0), 4)
-						cv2.circle(self.image_debug, r1_C, 2, (255, 255, 0), 4)
-						cv2.circle(self.image_debug, r1_D, 2, (255, 255, 0), 4)
+						cv2.circle(self.__image_debug, r1_A, 2, (255, 255, 0), 4)
+						cv2.circle(self.__image_debug, r1_B, 2, (255, 255, 0), 4)
+						cv2.circle(self.__image_debug, r1_C, 2, (255, 255, 0), 4)
+						cv2.circle(self.__image_debug, r1_D, 2, (255, 255, 0), 4)
 
-						cv2.circle(self.image_debug, r2_A, 2, (0, 255, 255), 4)
-						cv2.circle(self.image_debug, r2_B, 2, (0, 255, 255), 4)
-						cv2.circle(self.image_debug, r2_C, 2, (0, 255, 255), 4)
-						cv2.circle(self.image_debug, r2_D, 2, (0, 255, 255), 4)
+						cv2.circle(self.__image_debug, r2_A, 2, (0, 255, 255), 4)
+						cv2.circle(self.__image_debug, r2_B, 2, (0, 255, 255), 4)
+						cv2.circle(self.__image_debug, r2_C, 2, (0, 255, 255), 4)
+						cv2.circle(self.__image_debug, r2_D, 2, (0, 255, 255), 4)
 				# for all figures that have more than 8 edges
 				elif len(contour) > 8:
 					len_contour = len(contour)
@@ -146,7 +162,7 @@ class PlotOCR(OCR):
 						r1_D = approx[5][0]			# bottom-right
 						
 						lb1 = LabelBox(r1_A, r1_D)
-						self.labelboxes.append(lb1)
+						self.__labelboxes.append(lb1)
 
 						r2_B = approx[2][0]			# upper-right					
 						r2_C = approx[4][0]			# upper-right					
@@ -154,22 +170,22 @@ class PlotOCR(OCR):
 						r2_A = (r2_C[0], r2_B[1])
 
 						lb2 = LabelBox(r2_A, r2_D)
-						self.labelboxes.append(lb2)
+						self.__labelboxes.append(lb2)
 
 						if self.debug_mode:
-							cv2.drawContours(self.image_debug, [contour], 0, (0, 255, 255), 2)
+							cv2.drawContours(self.__image_debug, [contour], 0, (0, 255, 255), 2)
 
 							# draw rect 1
-							cv2.rectangle(self.image_debug, r1_A, r1_D, (0, 255, 0), 3)
-							cv2.circle(self.image_debug, r1_A, 2, (255, 255, 0), 4)
-							cv2.circle(self.image_debug, r1_D, 2, (255, 255, 0), 4)
+							cv2.rectangle(self.__image_debug, r1_A, r1_D, (0, 255, 0), 3)
+							cv2.circle(self.__image_debug, r1_A, 2, (255, 255, 0), 4)
+							cv2.circle(self.__image_debug, r1_D, 2, (255, 255, 0), 4)
 
 							# draw rect 2
-							cv2.rectangle(self.image_debug, r2_A, r2_D, (0, 255, 0), 3)
-							cv2.circle(self.image_debug, r2_A, 2, (255, 255, 0), 4)
-							cv2.circle(self.image_debug, r2_B, 2, (255, 255, 0), 4)
-							cv2.circle(self.image_debug, r2_C, 2, (255, 255, 0), 4)
-							cv2.circle(self.image_debug, r2_D, 2, (255, 255, 0), 4)
+							cv2.rectangle(self.__image_debug, r2_A, r2_D, (0, 255, 0), 3)
+							cv2.circle(self.__image_debug, r2_A, 2, (255, 255, 0), 4)
+							cv2.circle(self.__image_debug, r2_B, 2, (255, 255, 0), 4)
+							cv2.circle(self.__image_debug, r2_C, 2, (255, 255, 0), 4)
+							cv2.circle(self.__image_debug, r2_D, 2, (255, 255, 0), 4)
 					except:
 						print('no vertices ')
 
@@ -177,7 +193,7 @@ class PlotOCR(OCR):
 	def process_text(self):
 		self.extract_labels()
 
-		res = pt.image_to_data(self.work_image, lang=self.lang, output_type = pt.Output.DICT)
+		res = pt.image_to_data(self.__work_image, lang=self.language, output_type = pt.Output.DICT)
 		res = pd.DataFrame(res)
 		res = res.loc[res['conf'] != -1]
 
@@ -199,7 +215,7 @@ class PlotOCR(OCR):
 			if conf > 80:
 				if len(text.strip(' ')) != 0 :
 					# region of interest of the letter
-					letter_roi = self.work_image[y:y+h, x:x+w]
+					letter_roi = self.__work_image[y:y+h, x:x+w]
 
 					w_cnt = 0
 					b_cnt = 0
@@ -216,16 +232,16 @@ class PlotOCR(OCR):
 						print('In the threshold image, the text is white')
 						print('Converting to negative')
 
-						self.work_image = 255 - self.work_image
+						self.__work_image = 255 - self.__work_image
 						dilatation_kernel = np.ones((2,2), np.uint8)
-						self.work_image = cv2.dilate(self.work_image, dilatation_kernel)
+						self.__work_image = cv2.dilate(self.__work_image, dilatation_kernel)
 
-						res = pt.image_to_data(self.work_image, lang='ita', output_type = pt.Output.DICT)
+						res = pt.image_to_data(self.__work_image, lang='ita', output_type = pt.Output.DICT)
 						res = pd.DataFrame(res)
 						res = res.loc[res['conf'] != -1]
 
 						if self.debug_mode:
-							tmp = cv2.resize(self.work_image, self.scale_size)
+							tmp = cv2.resize(self.__work_image, self.__scale_size)
 
 							cv2.imshow('negative', tmp)
 							cv2.waitKey(0)
@@ -259,53 +275,49 @@ class PlotOCR(OCR):
 				if len(text) > 0:
 					tb = TextBox((x, y), w, h, text)
 					if self.debug_mode:
-						cv2.rectangle(self.image_debug, (x, y), (x + w, y + h), (255, 0, 0), 2)
+						cv2.rectangle(self.__image_debug, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
-					self.textboxes.append(tb)
+					self.__textboxes.append(tb)
 
 	# composes the labelboxes verifying if the
 	# text is actually in that box
 	def compose_labelboxes(self):
-		image_hsv = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
-		for lb in self.labelboxes:
-			lb.set_color_rgb(self.image[lb.get_position()[1]+2, lb.get_position()[0]+2])
-			lb.set_color_hsv(image_hsv[lb.get_position()[1]+2, lb.get_position()[0]+2])
-			for tb in self.textboxes:
+		image_hsv = cv2.cvtColor(self.image_original, cv2.COLOR_BGR2HSV)
+		for lb in self.__labelboxes:
+			lb.color_rgb = (self.image_original[lb.position[1]+2, lb.position[0]+2])
+			lb.color_hsv = (image_hsv[lb.position[1]+2, lb.position[0]+2])
+			for tb in self.__textboxes:
 				lb.add_text_in_label(tb)
 
 		self.verify_labelboxes()
 
 	# deletes all blank labelboxes
 	def verify_labelboxes(self):
-		for lb in self.labelboxes.copy():
+		for lb in self.__labelboxes.copy():
 			if len(lb.label.strip(' ')) == 0 or len(lb.label) == 0:
-				self.labelboxes.remove(lb)
+				self.__labelboxes.remove(lb)
 
-		print('Labels extracted: {N}\n'.format(N = len(self.labelboxes)))
+		print('Labels extracted: {N}\n'.format(N = len(self.__labelboxes)))
 
-		for lb in self.labelboxes:
-			lb.label = lb.label[:-1]
-			print('Position: ({x},{y})\nText: {label}\nLabel length: {l}\nValue: {center}\n'.format(x = lb.get_position()[0],\
-																								y = lb.get_position()[1],\
-																								label = lb.get_label(),
-																								l = len(lb.get_label()),
-																								center = lb.get_center()))
+		for lb in self.__labelboxes:
+			lb.label.replace(lb.label, lb.label[:-1])
+			
+			print('Position: ({x},{y})\nText: {label}\nLabel length: {l}\nValue: {center}\n'.format(x = lb.position[0],\
+																								y = lb.position[1],\
+																								label = lb.label,
+																								l = len(lb.label),
+																								center = lb.center))
 			if self.debug_mode:
-				cv2.circle(self.image_debug, lb.get_center(), 5, (0, 0, 255), 5)
-	
-	def get_labelboxes(self):
-		return self.labelboxes
+				cv2.circle(self.__image_debug, lb.get_center(), 5, (0, 0, 255), 5)
 
-	def extract_data(self):
-		self.compose_labelboxes()
-		
-		return self.get_labelboxes()
+	def get_data(self):
+		return self.__labelboxes
 
 	# used in debug mode for the visualization
 	def show_image(self):
-		scaled_image = cv2.resize(self.image_debug, self.scale_size)
-		scaled_threshold = cv2.resize(self.work_image, self.scale_size)
-		scaled_grayscale = cv2.resize(self.image_gray, self.scale_size)
+		scaled_image = cv2.resize(self.__image_debug, self.__scale_size)
+		scaled_threshold = cv2.resize(self.__work_image, self.__scale_size)
+		scaled_grayscale = cv2.resize(self.__image_gray, self.__scale_size)
 		
 		cv2.imshow('grayscale', scaled_grayscale)
 		cv2.imshow('threshold ocr', scaled_threshold)
@@ -313,15 +325,15 @@ class PlotOCR(OCR):
 		cv2.waitKey(0)
 	
 	def get_image_work(self):
-		return self.work_image
+		return self.__work_image
 
 	def get_colors_rgb(self):
 		colors = []
 
-		for lb in self.labelboxes:
-			if lb.color_rgb not in colors:
+		for lb in self.__labelboxes:
+			if lb.color_rgb() not in colors:
 				col = []
-				for gr_lev in lb.color_rgb:
+				for gr_lev in lb.color_rgb():
 					gr = int(gr_lev)
 					col.append(gr)
 				col = tuple(col)
@@ -332,7 +344,7 @@ class PlotOCR(OCR):
 	def get_colors_hsv(self):
 		colors = []
 
-		for lb in self.labelboxes:
+		for lb in self.__labelboxes:
 			if lb.color_hsv not in colors:
 				col = []
 				for val in lb.color_hsv:
@@ -344,17 +356,17 @@ class PlotOCR(OCR):
 		return colors
 
 class LegendOCR(OCR):
-	def __init__(self, image, image_fn, labelboxes, lang, scale_factor, debug_mode):
-		super(LegendOCR, self).__init__(image, image_fn, lang, scale_factor, debug_mode)
+	def __init__(self, image, labelboxes, lang, scale_factor, debug_mode):
+		super(LegendOCR, self).__init__(image, lang, scale_factor, debug_mode)
 		
-		_, self.work_image = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
+		_, self.__work_image = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
 		self.colors_pos = []
 		# dilatation_kernel = np.ones((1,1), np.uint8)
-		# self.work_image = cv2.dilate(self.work_image, erosion_kernel)
-		self.labelboxes = labelboxes
+		# self.__work_image = cv2.dilate(self.__work_image, erosion_kernel)
+		self.__labelboxes = labelboxes
 
 		if debug_mode:
-			tmp = cv2.resize(self.work_image, self.scale_size)
+			tmp = cv2.resize(self.__work_image, self.__scale_size)
 
 			cv2.imshow('legend shapes', tmp)
 			cv2.waitKey(0)
@@ -371,11 +383,11 @@ class LegendOCR(OCR):
 			approx = cv2.approxPolyDP(contour, 0.01 * cv2.arcLength(contour, True), True)
 
 	def process_text(self):
-		res = pt.image_to_data(self.work_image, lang=self.lang, output_type = pt.Output.DICT)
+		res = pt.image_to_data(self.__work_image, lang=self.language, output_type = pt.Output.DICT)
 		res = pd.DataFrame(res)
 		res = res.loc[res['conf'] != -1]
 
-		self.textboxes = []
+		self.__textboxes = []
 
 		for i in range(0, len(res)):
 			# extract the bounding box coordinates of the text region from
@@ -395,16 +407,16 @@ class LegendOCR(OCR):
 				if len(text) > 0:
 					tb = TextBox((x, y), w, h, text)
 					if self.debug_mode:
-						cv2.rectangle(self.image_debug, (x, y), (x + w, y + h), (255, 0, 0), 2)
+						cv2.rectangle(self.__image_debug, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
-					self.textboxes.append(tb)
+					self.__textboxes.append(tb)
 
 	# using hsv color-space, it calls inRange()
 	# function to detect color position
 	def get_colors_position(self, colors_hsv):
 		i = 1
 		for c in colors_hsv:
-			image_hsv = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
+			image_hsv = cv2.cvtColor(self.image_original, cv2.COLOR_BGR2HSV)
 
 			mask = cv2.inRange(image_hsv, c, c)
 
@@ -421,34 +433,31 @@ class LegendOCR(OCR):
 				x, y = (int(mean[0][0]), int(mean[0][1]))
 
 				# taking rgb color
-				c_rgb = tuple(self.image[y][x])[::-1]
+				c_rgb = tuple(self.image_original[y][x])[::-1]
 
 				#print('{col} is in position ({_x}, {_y})\n'.format(col=c_rgb, _x=x, _y=y))
 				self.colors_pos.append(((x, y), (c_rgb)))
 
 	def process_legend(self):
-		label = self.textboxes[0].text
-		for i in range(len(self.textboxes)):
-			if i == len(self.textboxes)-1: break
+		label = self.__textboxes[0].text
+		for i in range(len(self.__textboxes)):
+			if i == len(self.__textboxes)-1: break
 			else:
-				if self.textboxes[i].distance_from_textbox(self.textboxes[i+1]) < 15:
-					label += ' ' + self.textboxes[i+1].text
+				if self.__textboxes[i].distance_from_textbox(self.__textboxes[i+1]) < 15:
+					label += ' ' + self.__textboxes[i+1].text
 				else:
-					label += '\n' + self.textboxes[i+1].text
+					label += '\n' + self.__textboxes[i+1].text
 
 		legends_labels = label.split('\n')
-		# print(legends_labels)
 
 		# take the first word of every level
 		# and compute the distance between it
 		# and the colored square: if it's lower
 		# than a certain threshold, the square is
 		# linked to the label via a LegendBox (to-do)
-
-		self.legend_boxes = []
-
+		self.__legendboxes = []
 		for lb in legends_labels:
-			for tb in self.textboxes:
+			for tb in self.__textboxes:
 				if lb.split(' ')[0] == tb.text:
 					tmp_tb = tb		
 					for c in self.colors_pos:
@@ -456,75 +465,21 @@ class LegendOCR(OCR):
 						c_col = c[1]
 						if tb.distance_from_point(c_pos) < 40:
 							legend_box = LegendBox(c_pos)
-							legend_box.set_color(c_col)
-							legend_box.set_label(lb)
-							self.legend_boxes.append(legend_box)
+							legend_box.color = c_col
+							legend_box.label = lb
+							self.__legendboxes.append(legend_box)
 		
 		print("Extracted labels from legend:")
-		for lb in self.legend_boxes:
-			print("label: {l}\ncolor: {c}\n".format(l = lb.get_label(), c = lb.get_color()))
+		for lb in self.__legendboxes:
+			print("label: {l}\ncolor: {c}\n".format(l = lb.label, c = lb.color))
 
-	def renormalize_x_group(self, value, norm_min, norm_max):
-		x_values = [lb.get_center()[0] for lb in self.labelboxes]
-
-		min_x = min(x_values)
-		max_x = max(x_values)
-
-		norm_value = (norm_max - norm_min) * (value - min_x)/(max_x - min_x) 
-
-		return norm_value
-
-	def renormalize_y_stake(self, value, norm_min, norm_max):
-		y_values = [lb.get_center()[1] for lb in self.labelboxes]
-
-		min_y = min(y_values)
-		max_y = max(y_values)
-
-		norm_value = (norm_max - norm_min) * (value - min_y)/(max_y - min_y) 
-
-		norm_value -= norm_max
-		if norm_value < 0:
-			norm_value *= -1
-	
-		return norm_value
-
-	# function that makes a pandas dataframe
-	# containing the extracted data
-	def construct_dataset(self):
-		datas = []
-
-		for lb in self.labelboxes:
-			kind = None
-			for legb in self.legend_boxes:
-				if legb.get_color() == lb.color_rgb:
-					kind = legb.get_label()
-			group_value = self.renormalize_x_group(lb.get_center()[0], 0, 300)
-			stake_value = self.renormalize_y_stake(lb.get_center()[1], 0, 300)
-			
-			datas.append((lb.label, group_value, stake_value, kind))
-
-		df = pd.DataFrame(datas, columns=('Label', 'GroupRel', 'StakeRel', 'Kind'))
-
-		print('Showing the first rows of the dataset:')
-		print(df.head())
-		
-		img_extension = self.image_fn[-3:len(self.image_fn)]
-
-		out_dir = os.path.join('out')
-
-		if not os.path.isdir(out_dir):
-			os.mkdir(out_dir)
-
-		csv_fn = self.image_fn.replace(img_extension, 'csv').replace('src/', '')
-		out_path = os.path.join(out_dir, csv_fn)
-		
-		df.to_csv(out_path)
-		print('\nExtracted data was exported to {fn}'.format(fn = out_path))
+	def get_data(self):
+		return self.__legendboxes
 
 	def show_image(self):
-		scaled_image = cv2.resize(self.image_debug, self.scale_size)
-		scaled_threshold = cv2.resize(self.work_image, self.scale_size)
-		scaled_grayscale = cv2.resize(self.image_gray, self.scale_size)
+		scaled_image = cv2.resize(self.__image_debug, self.__scale_size)
+		scaled_threshold = cv2.resize(self.__work_image, self.__scale_size)
+		scaled_grayscale = cv2.resize(self.__image_gray, self.__scale_size)
 		
 		cv2.imshow('legend grayscale', scaled_grayscale)
 		cv2.imshow('legend threshold ocr', scaled_threshold)
