@@ -38,7 +38,7 @@ class OCR:
 	def language(self):
 		return self.__lang
 
-	def process_text(self):
+	def __process_text(self):
 		pass
 
 	def show_image(self):
@@ -47,6 +47,8 @@ class OCR:
 	def get_data(self):
 		pass
 
+# OCR object class useful to
+# detect plot part of the image
 class PlotOCR(OCR):
 	def __init__(self, image, lang = str, scale_factor = float, debug_mode = bool):
 		super(PlotOCR, self).__init__(image, lang, scale_factor, debug_mode)
@@ -56,7 +58,7 @@ class PlotOCR(OCR):
 		_, self.__work_image = cv2.threshold(self.image_gray, 185, 255, cv2.THRESH_BINARY)
 
 	# function that detects all the rectangles that contain the labels
-	def extract_labels(self):
+	def __extract_labels(self):
 		_, shapes = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
 
 		# we need to dilate the image in order to remove the lines
@@ -190,9 +192,7 @@ class PlotOCR(OCR):
 						print('no vertices ')
 
 	# function that calls the tesseract OCR
-	def process_text(self):
-		self.extract_labels()
-
+	def __process_text(self):
 		res = pt.image_to_data(self.__work_image, lang=self.language, output_type = pt.Output.DICT)
 		res = pd.DataFrame(res)
 		res = res.loc[res['conf'] != -1]
@@ -281,7 +281,7 @@ class PlotOCR(OCR):
 
 	# composes the labelboxes verifying if the
 	# text is actually in that box
-	def compose_labelboxes(self):
+	def __compose_labelboxes(self):
 		image_hsv = cv2.cvtColor(self.image_original, cv2.COLOR_BGR2HSV)
 		for lb in self.__labelboxes:
 			lb.color_rgb = (self.image_original[lb.position[1]+2, lb.position[0]+2])
@@ -289,10 +289,8 @@ class PlotOCR(OCR):
 			for tb in self.__textboxes:
 				lb.add_text_in_label(tb)
 
-		self.verify_labelboxes()
-
 	# deletes all blank labelboxes
-	def verify_labelboxes(self):
+	def __verify_labelboxes(self):
 		for lb in self.__labelboxes.copy():
 			if len(lb.label.strip(' ')) == 0 or len(lb.label) == 0:
 				self.__labelboxes.remove(lb)
@@ -300,7 +298,7 @@ class PlotOCR(OCR):
 		print('Labels extracted: {N}\n'.format(N = len(self.__labelboxes)))
 
 		for lb in self.__labelboxes:
-			lb.label.replace(lb.label, lb.label[:-1])
+			# lb.label.replace(lb.label, lb.label[:-1])
 			
 			print('Position: ({x},{y})\nText: {label}\nLabel length: {l}\nValue: {center}\n'.format(x = lb.position[0],\
 																								y = lb.position[1],\
@@ -309,6 +307,12 @@ class PlotOCR(OCR):
 																								center = lb.center))
 			if self.debug_mode:
 				cv2.circle(self.__image_debug, lb.get_center(), 5, (0, 0, 255), 5)
+
+	def process_image(self):
+		self.__extract_labels()
+		self.__process_text()
+		self.__compose_labelboxes()
+		self.__verify_labelboxes()
 
 	def get_data(self):
 		return self.__labelboxes
@@ -327,6 +331,8 @@ class PlotOCR(OCR):
 	def get_image_work(self):
 		return self.__work_image
 
+	# returns colors (in rgb format)
+	# of the labelboxes in the plot
 	def get_colors_rgb(self):
 		colors = []
 
@@ -341,6 +347,8 @@ class PlotOCR(OCR):
 
 		return colors
 
+	# returns colors (in opencv's hsv format)
+	# of the labelboxes in the plot
 	def get_colors_hsv(self):
 		colors = []
 
@@ -355,6 +363,8 @@ class PlotOCR(OCR):
 		
 		return colors
 
+# OCR object class useful to detect
+# the legend part of the image
 class LegendOCR(OCR):
 	def __init__(self, image, labelboxes, lang, scale_factor, debug_mode):
 		super(LegendOCR, self).__init__(image, lang, scale_factor, debug_mode)
@@ -371,18 +381,7 @@ class LegendOCR(OCR):
 			cv2.imshow('legend shapes', tmp)
 			cv2.waitKey(0)
 
-	def process_forms(self):
-		contours, _ = cv2.findContours(dilated_shapes, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-		i = 0
-		for contour in contours:
-			if i == 0:
-				i = 1
-				continue
-
-			approx = cv2.approxPolyDP(contour, 0.01 * cv2.arcLength(contour, True), True)
-
-	def process_text(self):
+	def __process_text(self):
 		res = pt.image_to_data(self.__work_image, lang=self.language, output_type = pt.Output.DICT)
 		res = pd.DataFrame(res)
 		res = res.loc[res['conf'] != -1]
@@ -413,7 +412,7 @@ class LegendOCR(OCR):
 
 	# using hsv color-space, it calls inRange()
 	# function to detect color position
-	def get_colors_position(self, colors_hsv):
+	def __get_colors_position(self, colors_hsv):
 		i = 1
 		for c in colors_hsv:
 			image_hsv = cv2.cvtColor(self.image_original, cv2.COLOR_BGR2HSV)
@@ -438,7 +437,7 @@ class LegendOCR(OCR):
 				#print('{col} is in position ({_x}, {_y})\n'.format(col=c_rgb, _x=x, _y=y))
 				self.colors_pos.append(((x, y), (c_rgb)))
 
-	def process_legend(self):
+	def __process_legend(self):
 		label = self.__textboxes[0].text
 		for i in range(len(self.__textboxes)):
 			if i == len(self.__textboxes)-1: break
@@ -472,6 +471,11 @@ class LegendOCR(OCR):
 		print("Extracted labels from legend:")
 		for lb in self.__legendboxes:
 			print("label: {l}\ncolor: {c}\n".format(l = lb.label, c = lb.color))
+
+	def process_image(self, colors_hsv):
+		self.__process_text()
+		self.__get_colors_position(colors_hsv)
+		self.__process_legend()
 
 	def get_data(self):
 		return self.__legendboxes

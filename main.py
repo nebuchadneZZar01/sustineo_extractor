@@ -21,8 +21,7 @@ def main(image_dir, language, scale_visualization, debug_mode):
     print('--- PLOT LOG ---')
 
     ocr = PlotOCR(plot, language, scale_visualization, debug_mode)
-    ocr.process_text()
-    ocr.compose_labelboxes()
+    ocr.process_image()
 
     labelboxes = ocr.get_data()
     plot_col = ocr.get_colors_hsv()
@@ -30,13 +29,12 @@ def main(image_dir, language, scale_visualization, debug_mode):
     print('--- LEGEND LOG ---')
 
     leg = LegendOCR(legend, labelboxes, language, scale_visualization, debug_mode)
-    leg.process_text()
-    leg.get_colors_position(plot_col)
-    leg.process_legend()
+    leg.process_image(plot_col)
     legendboxes = leg.get_data()
 
     ex = Exporter(image_dir, labelboxes, legendboxes)
-    ex.construct_dataset()
+    ex.compose_export_dataset()
+    ex.compose_export_plot()
 
     if debug_mode:
         ocr.show_image()
