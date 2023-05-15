@@ -81,14 +81,10 @@ class LabelBox(Box):
         self.__label = ''
         self.__color_rgb = '1'                                  # background color of the box
         self.__color_hsv = '1'                                  # used to detect the color range
-    
-    # cuncatenate the word to the actual label if its 
-    # bounding box is contained in the label box
-    def add_text_in_label(self, tb=TextBox):
-        if tb.in_box(self):
-            self.__label += tb.text + ' '
-        else:
-            pass
+
+        # defines how good the alignment is
+        # compared to the diagonal
+        self.__alignment = 0
     
     @property
     def color_rgb(self):
@@ -109,6 +105,22 @@ class LabelBox(Box):
     @property
     def label(self):
         return self.__label
+
+    @property
+    def alignment(self):
+        return self.__alignment
+
+    @alignment.setter
+    def alignment(self):
+        pass
+
+    # cuncatenate the word to the actual label if its 
+    # bounding box is contained in the label box
+    def add_text_in_label(self, tb=TextBox):
+        if tb.in_box(self):
+            self.__label += tb.text + ' '
+        else:
+            pass
 
 # defines the block containing a legend label
 # with its color, its label and starting from

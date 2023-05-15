@@ -25,20 +25,19 @@ def main(image_dir, language, scale_visualization, debug_mode):
 
     labelboxes = ocr.get_data()
     plot_col = ocr.get_colors_hsv()
+    if debug_mode: ocr.show_image()
 
     print('--- LEGEND LOG ---')
 
     leg = LegendOCR(legend, labelboxes, language, scale_visualization, debug_mode)
     leg.process_image(plot_col)
     legendboxes = leg.get_data()
+    if debug_mode: leg.show_image()
 
     ex = Exporter(image_dir, labelboxes, legendboxes)
     ex.compose_export_dataset()
     ex.compose_export_plot()
 
-    if debug_mode:
-        ocr.show_image()
-        leg.show_image()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='sustineo_extractor',
@@ -48,10 +47,19 @@ if __name__ == '__main__':
                                             formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument('filename')
-    parser.add_argument('-l', '--language', type=str, default='ita', help='language of the plot to extract (default="ita")')
-    parser.add_argument('-d', '--debug-mode', type=bool, default=False, help='activate the visualization of the various passes (default=false)')
-    parser.add_argument('-s', '--size-factor', type=float, default=1.5, help='if used in debug mode, the image sizes will be divided by the choosen scale factor for a better visualization on lower resolution screens (default=1.5)')
+    parser.add_argument('-l', '--language', type=str, default='ita',\
+                        help='language of the plot to extract (default="ita")')
+
+    parser.add_argument('-d', '--debug-mode', action='store_true',\
+                        help='activate the visualization of the various passes')
+
+    parser.add_argument('-s', '--size-factor', type=float, default=1.5,\
+                        help='if used in debug mode, the image sizes will be divided by the choosen\
+                            scale factor for a better visualization on lower resolution screens (default=1.5)')
 
     args = parser.parse_args()
 
-    main(args.filename, args.language, args.size_factor, args.debug_mode)
+    if os.path.isfile(args.filename):
+        main(args.filename, args.language, args.size_factor, args.debug_mode)
+    else:
+        print('ERROR: File {fn} does not exist'.format(fn = args.filename))

@@ -17,7 +17,7 @@ class Cropper:
         
         if self.__debug_mode:
             self.__scale_size = (int(self.image_size[0]/scale_factor), int(self.image_size[1]/scale_factor))
-            self.__image_debug = self.image.copy()
+            self.__image_debug = self.__image.copy()
 
             self.__scale_factor = scale_factor
 
@@ -142,8 +142,6 @@ class Cropper:
     
         plot = self.__image[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
 
-        print(self.__image_size[0] - w)
-
         # if the image has a legend on the left or on the right
         # the legend part will be composed by the intire original
         # image, but with the plot part filled with white
@@ -154,8 +152,8 @@ class Cropper:
             legend = self.__image[bottom_right[1]:self.image_size[1], top_left[0]:bottom_right[0]]
 
         if self.__debug_mode:
-            tmp_plot_r_size = (int(plot.shape[1]/self.scale_factor), int(plot.shape[0]/self.scale_factor))
-            tmp_leg_r_size = (int(legend.shape[1]/self.scale_factor), int(legend.shape[0]/self.scale_factor))
+            tmp_plot_r_size = (int(plot.shape[1]/self.__scale_factor), int(plot.shape[0]/self.__scale_factor))
+            tmp_leg_r_size = (int(legend.shape[1]/self.__scale_factor), int(legend.shape[0]/self.__scale_factor))
 
             tmp_plot = cv2.resize(plot, tmp_plot_r_size)
             tmp_leg = cv2.resize(legend, tmp_leg_r_size)

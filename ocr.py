@@ -20,7 +20,7 @@ class OCR:
 			self.__image_debug = self.__image.copy()
 			self.__scale_factor = scale_factor if scale_factor != 0.0 else 1.0
 			
-			self.__scale_size = (int(self.__image.shape[1]/self.scale_factor), int(self.__image.shape[0]/self.scale_factor))
+			self.__scale_size = (int(self.__image.shape[1]/self.__scale_factor), int(self.__image.shape[0]/self.__scale_factor))
 
 	@property
 	def image_original(self):
@@ -29,6 +29,14 @@ class OCR:
 	@property
 	def image_gray(self):
 		return self.__image_gray
+
+	@property
+	def image_debug(self):
+		return self.__image_debug
+
+	@property
+	def scale_size(self):
+		return self.__scale_size
 
 	@property
 	def debug_mode(self):
@@ -67,9 +75,10 @@ class PlotOCR(OCR):
 		dilated_shapes = cv2.dilate(shapes, dilate_kernel)
 
 		if self.debug_mode:
-			tmp = cv2.resize(dilated_shapes, self.__scale_size)
+			tmp = cv2.resize(dilated_shapes, self.scale_size)
 
 			cv2.imshow('shapes', tmp)
+			cv2.waitKey(0)
 
 		contours, _ = cv2.findContours(dilated_shapes, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -92,9 +101,9 @@ class PlotOCR(OCR):
 					self.__labelboxes.append(lb)
 					
 					if self.debug_mode:
-						cv2.drawContours(self.__image_debug, [contour], 0, (0, 255, 0), 2)
-						cv2.circle(self.__image_debug, A, 2, (255, 255, 0), 4)
-						cv2.circle(self.__image_debug, D, 2, (255, 255, 0), 4)
+						cv2.drawContours(self.image_debug, [contour], 0, (0, 255, 0), 2)
+						cv2.circle(self.image_debug, A, 2, (255, 255, 0), 4)
+						cv2.circle(self.image_debug, D, 2, (255, 255, 0), 4)
 
 				# merged rectangles
 				elif len(approx) == 8:
@@ -117,23 +126,23 @@ class PlotOCR(OCR):
 					self.__labelboxes.append(lb2)
 
 					if self.debug_mode:
-						cv2.drawContours(self.__image_debug, [contour], 0, (0, 0, 255), 2)
+						cv2.drawContours(self.image_debug, [contour], 0, (0, 0, 255), 2)
 						
 						# draw rect 1
-						cv2.rectangle(self.__image_debug, r1_A, r1_D, (0, 255, 0), 3)
+						cv2.rectangle(self.image_debug, r1_A, r1_D, (0, 255, 0), 3)
 
 						# draw rect 2
-						cv2.rectangle(self.__image_debug, r2_A, r2_D, (0, 255, 0), 3)
+						cv2.rectangle(self.image_debug, r2_A, r2_D, (0, 255, 0), 3)
 
-						cv2.circle(self.__image_debug, r1_A, 2, (255, 255, 0), 4)
-						cv2.circle(self.__image_debug, r1_B, 2, (255, 255, 0), 4)
-						cv2.circle(self.__image_debug, r1_C, 2, (255, 255, 0), 4)
-						cv2.circle(self.__image_debug, r1_D, 2, (255, 255, 0), 4)
+						cv2.circle(self.image_debug, r1_A, 2, (255, 255, 0), 4)
+						cv2.circle(self.image_debug, r1_B, 2, (255, 255, 0), 4)
+						cv2.circle(self.image_debug, r1_C, 2, (255, 255, 0), 4)
+						cv2.circle(self.image_debug, r1_D, 2, (255, 255, 0), 4)
 
-						cv2.circle(self.__image_debug, r2_A, 2, (0, 255, 255), 4)
-						cv2.circle(self.__image_debug, r2_B, 2, (0, 255, 255), 4)
-						cv2.circle(self.__image_debug, r2_C, 2, (0, 255, 255), 4)
-						cv2.circle(self.__image_debug, r2_D, 2, (0, 255, 255), 4)
+						cv2.circle(self.image_debug, r2_A, 2, (0, 255, 255), 4)
+						cv2.circle(self.image_debug, r2_B, 2, (0, 255, 255), 4)
+						cv2.circle(self.image_debug, r2_C, 2, (0, 255, 255), 4)
+						cv2.circle(self.image_debug, r2_D, 2, (0, 255, 255), 4)
 				# for all figures that have more than 8 edges
 				elif len(contour) > 8:
 					len_contour = len(contour)
@@ -189,7 +198,7 @@ class PlotOCR(OCR):
 							cv2.circle(self.__image_debug, r2_C, 2, (255, 255, 0), 4)
 							cv2.circle(self.__image_debug, r2_D, 2, (255, 255, 0), 4)
 					except:
-						print('no vertices ')
+						print('no vertices')
 
 	# function that calls the tesseract OCR
 	def __process_text(self):
@@ -213,7 +222,7 @@ class PlotOCR(OCR):
 			conf = int(res.iloc[lett_cnt]['conf'])
 
 			if conf > 80:
-				if len(text.strip(' ')) != 0 :
+				if len(text.strip(' ')) != 0:
 					# region of interest of the letter
 					letter_roi = self.__work_image[y:y+h, x:x+w]
 
@@ -245,10 +254,8 @@ class PlotOCR(OCR):
 
 							cv2.imshow('negative', tmp)
 							cv2.waitKey(0)
-
 					break
-				else:
-					lett_cnt += 1
+			lett_cnt += 1
 
 		for i in range(0, len(res)):
 			# extract the bounding box coordinates of the text region from
@@ -275,7 +282,7 @@ class PlotOCR(OCR):
 				if len(text) > 0:
 					tb = TextBox((x, y), w, h, text)
 					if self.debug_mode:
-						cv2.rectangle(self.__image_debug, (x, y), (x + w, y + h), (255, 0, 0), 2)
+						cv2.rectangle(self.image_debug, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
 					self.__textboxes.append(tb)
 
@@ -306,7 +313,7 @@ class PlotOCR(OCR):
 																								l = len(lb.label),
 																								center = lb.center))
 			if self.debug_mode:
-				cv2.circle(self.__image_debug, lb.get_center(), 5, (0, 0, 255), 5)
+				cv2.circle(self.image_debug, lb.center, 5, (0, 0, 255), 5)
 
 	def process_image(self):
 		self.__extract_labels()
@@ -319,9 +326,9 @@ class PlotOCR(OCR):
 
 	# used in debug mode for the visualization
 	def show_image(self):
-		scaled_image = cv2.resize(self.__image_debug, self.__scale_size)
-		scaled_threshold = cv2.resize(self.__work_image, self.__scale_size)
-		scaled_grayscale = cv2.resize(self.__image_gray, self.__scale_size)
+		scaled_image = cv2.resize(self.image_debug, self.scale_size)
+		scaled_threshold = cv2.resize(self.__work_image, self.scale_size)
+		scaled_grayscale = cv2.resize(self.image_debug, self.scale_size)
 		
 		cv2.imshow('grayscale', scaled_grayscale)
 		cv2.imshow('threshold ocr', scaled_threshold)
@@ -376,7 +383,7 @@ class LegendOCR(OCR):
 		self.__labelboxes = labelboxes
 
 		if debug_mode:
-			tmp = cv2.resize(self.__work_image, self.__scale_size)
+			tmp = cv2.resize(self.__work_image, self.scale_size)
 
 			cv2.imshow('legend shapes', tmp)
 			cv2.waitKey(0)
@@ -406,7 +413,7 @@ class LegendOCR(OCR):
 				if len(text) > 0:
 					tb = TextBox((x, y), w, h, text)
 					if self.debug_mode:
-						cv2.rectangle(self.__image_debug, (x, y), (x + w, y + h), (255, 0, 0), 2)
+						cv2.rectangle(self.image_debug, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
 					self.__textboxes.append(tb)
 
@@ -414,14 +421,15 @@ class LegendOCR(OCR):
 	# function to detect color position
 	def __get_colors_position(self, colors_hsv):
 		i = 1
+		image_hsv = cv2.cvtColor(self.image_original, cv2.COLOR_BGR2HSV)
 		for c in colors_hsv:
-			image_hsv = cv2.cvtColor(self.image_original, cv2.COLOR_BGR2HSV)
-
 			mask = cv2.inRange(image_hsv, c, c)
 
 			if self.debug_mode:
 				cv2.imshow('hsv', image_hsv)
 				cv2.imshow('mask {n}'.format(n=i), mask)
+
+				cv2.waitKey(0)
 				i += 1
 
 			# finds the points where the mask is not zero
@@ -463,10 +471,11 @@ class LegendOCR(OCR):
 						c_pos = c[0]
 						c_col = c[1]
 						if tb.distance_from_point(c_pos) < 40:
-							legend_box = LegendBox(c_pos)
-							legend_box.color = c_col
-							legend_box.label = lb
-							self.__legendboxes.append(legend_box)
+							if len(lb.split(' ')[0]) > 1:
+								legend_box = LegendBox(c_pos)
+								legend_box.color = c_col
+								legend_box.label = lb
+								self.__legendboxes.append(legend_box)
 		
 		print("Extracted labels from legend:")
 		for lb in self.__legendboxes:
@@ -481,9 +490,9 @@ class LegendOCR(OCR):
 		return self.__legendboxes
 
 	def show_image(self):
-		scaled_image = cv2.resize(self.__image_debug, self.__scale_size)
-		scaled_threshold = cv2.resize(self.__work_image, self.__scale_size)
-		scaled_grayscale = cv2.resize(self.__image_gray, self.__scale_size)
+		scaled_image = cv2.resize(self.image_debug, self.scale_size)
+		scaled_threshold = cv2.resize(self.__work_image, self.scale_size)
+		scaled_grayscale = cv2.resize(self.image_gray, self.scale_size)
 		
 		cv2.imshow('legend grayscale', scaled_grayscale)
 		cv2.imshow('legend threshold ocr', scaled_threshold)

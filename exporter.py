@@ -94,25 +94,33 @@ class Exporter:
     def compose_export_plot(self):
         n_points = len(self.dataframe)
 
-        fig_width = max(7, n_points / 2)
+        # size of the plot
+        fig_width = max(8, n_points / 2)
         fig_height = max(8, n_points / 4)
 
+        # taking colors for datasets
         label_colors = {label: color for label, color in zip(self.dataframe['Label'].unique(), cm.tab20.colors)}
         kind_colors = {kind: color for kind, color in zip(self.dataframe['Kind'].unique(), cm.tab20.colors)}
 
+        # mapping strings into numerical values
         label_mapping = {label: i for i, label in enumerate(self.dataframe['Label'].unique())}
         kind_mapping = {kind: i for i, kind in enumerate(self.dataframe['Kind'].unique())}
 
         fig, ax = plt.subplots(figsize=(fig_width,fig_height))
+        ax.grid(linestyle = '--')                               
+        ax.axline((0,0), slope=1, linestyle='-', color='red')               # alignment line
 
+        # generating the scatterplot
         scatter = ax.scatter(self.dataframe['GroupRel'], self.dataframe['StakeRel'], c=[label_mapping[label] for label in self.dataframe['Label']], edgecolors=[kind_colors[kind] for kind in self.dataframe['Kind']], cmap='tab20')
 
+        # generating colormaps
         label_cmap = cm.get_cmap('tab20', len(self.dataframe['Label'].unique()))
         label_legend_elements = [Patch(facecolor=label_cmap(i), label=label) for i, label in enumerate(self.dataframe['Label'].unique())]
 
         kind_cmap = cm.get_cmap('tab20', len(self.dataframe['Kind'].unique()))
         kind_legend_elements = [Patch(facecolor=kind_cmap(i), edgecolor=kind_cmap(i), label=kind) for i, kind in enumerate(self.dataframe['Kind'].unique())]
 
+        # generating legends
         ax.legend(handles=label_legend_elements, title='Label', loc = 'lower left', bbox_to_anchor=(0, 1))
 
         ax2 = ax.twinx()
