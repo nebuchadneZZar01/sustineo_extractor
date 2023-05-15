@@ -18,10 +18,9 @@ This `python` software can be used to extract data from block-form materiality m
 
 The software follows 5 different passes:
 1. [Plot/legend subdivision](#1-plotlegend-subdivision)
-2. [Shape detection](#2-shape-detection)
-3. [Text detection](#3-text-detection)
-4. [Normalization](#4-normalization)
-5. [CSV Export](#5-csv-export)
+2. [Plot interpretation](#2-plot-interpretation)
+3. [Legend interpretation](#3-text-detection)
+4. [Final export](#4-final-export)
 
 ### 1. Plot/legend subdivision
 At first, in order to have higher scalability, the input image is **divided** into two section: plot and lagend. 
