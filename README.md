@@ -16,6 +16,10 @@ This `python` software can be used to extract data from block-form materiality m
 
 ![image](src/amadori2.png)
 
+You can obtain an output like the following:
+
+![image](out/img/amadori2.png)
+
 The software follows 5 different passes:
 1. [Plot/legend subdivision](#1-plotlegend-subdivision)
 2. [Plot interpretation](#2-plot-interpretation)
