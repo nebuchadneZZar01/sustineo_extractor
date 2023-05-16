@@ -73,6 +73,29 @@ class Exporter:
         print('Showing the first rows of the dataset:')
         print(self.__dataframe.head())
 
+    # ranking by x, group relevance
+    def rank_by_x(self):
+        df = self.dataframe
+        df['RankGroup'] = df['GroupRel'].rank(method='min', ascending=False).astype(int)
+    
+    # ranking by y, stakeholders relevance
+    def rank_by_y(self):
+        df = self.dataframe
+        df['RankStake'] = df['StakeRel'].rank(method='min', ascending=False).astype(int)
+
+    # ranking by (x,y), both group and stakeholders
+    def rank_absolute(self):
+        df = self.dataframe
+        df['RankAbsolute'] = df[['GroupRel', 'StakeRel']].apply(tuple, axis=1).rank(method='min', ascending=False).astype(int)
+
+    def add_ranking(self):
+        self.rank_by_x()
+        self.rank_by_y()
+        self.rank_absolute()
+
+        print('Added rankings by group, stakeholders and absolute relevances:')
+        print(self.dataframe.head())
+
     def export_dataset(self):
         img_extension = self.__image_fn[-3:len(self.__image_fn)]
 
@@ -89,6 +112,7 @@ class Exporter:
 
     def compose_export_dataset(self):
         self.compose_dataset()
+        self.add_ranking()
         self.export_dataset()
 
     def compose_export_plot(self):

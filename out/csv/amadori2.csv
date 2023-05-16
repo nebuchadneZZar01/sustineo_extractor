@@ -1,15 +1,15 @@
-,Label,GroupRel,StakeRel,Kind
-0,Protezione della privacy,0.0,0.0,Prodotto e clienti
-1,Educazione e sensibilizzazione del consumatore,82.84734133790738,44.6629213483146,Prodotto e clienti
-2,Emissioni in atmosfera,163.63636363636363,51.82584269662922,Impatto ambientale
-3,Diversit e inclusione,27.015437392795885,90.58988764044943,Persone
-4,Tutela del suolo e della biodiversit,20.840480274442537,118.82022471910113,Impatto ambientale
-5,Centralit e benessere del dipendente,169.81132075471697,154.2134831460674,Persone
-6,Sviluppo professionale dei dipendenti,130.96054888507717,108.2865168539326,Persone
-7,Benessere degli animali,280.4459691252144,173.1741573033708,Prodotto e clienti
-8,"Trasparenza, tracciabilit e circolarit della filiera",262.43567753001713,145.7865168539326,Prodotto e clienti
-9,"Economia circolare, valorizzazione scarti e gestione rifiuti",300.0,224.1573033707865,Impatto ambientale
-10,Gestione della risorse idriche,143.82504288164665,243.11797752808988,Impatto ambientale
-11,Qualit del prodotto e attenzione al consumatore,290.99485420240137,262.07865168539325,Prodotto e clienti
-12,Salute e sicurezza dei lavoratori,180.87478559176674,295.36516853932585,Persone
-13,Efficientamento energetico e lotta al cambiamento climatico,271.6981132075472,300.0,Impatto ambientale
+,Label,GroupRel,StakeRel,Kind,RankGroup,RankStake,RankAbsolute
+0,Protezione della privacy,0.0,0.0,,14,14,14
+1,Educazione e sensibilizzazione del consumatore,82.84734133790738,44.6629213483146,,11,13,11
+2,Emissioni in atmosfera,163.63636363636363,51.82584269662922,,8,12,8
+3,Diversit e inclusione,27.015437392795885,90.58988764044943,Persone,12,11,12
+4,Tutela del suolo e della biodiversit,20.840480274442537,118.82022471910113,,13,9,13
+5,Centralit e benessere del dipendente,169.81132075471697,154.2134831460674,Persone,7,7,7
+6,Sviluppo professionale dei dipendenti,130.96054888507717,108.2865168539326,Persone,10,10,10
+7,Benessere degli animali,280.4459691252144,173.1741573033708,,3,6,3
+8,"Trasparenza, tracciabilit e circolarit della filiera",262.43567753001713,145.7865168539326,,5,8,5
+9,"Economia circolare, valorizzazione scarti e gestione rifiuti",300.0,224.1573033707865,,1,5,1
+10,Gestione della risorse idriche,143.82504288164665,243.11797752808988,,9,4,9
+11,Qualit del prodotto e attenzione al consumatore,290.99485420240137,262.07865168539325,,2,3,2
+12,Salute e sicurezza dei lavoratori,180.87478559176674,295.36516853932585,Persone,6,2,6
+13,Efficientamento energetico e lotta al cambiamento climatico,271.6981132075472,300.0,,4,1,4
