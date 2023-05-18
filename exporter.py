@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.patches import Patch
@@ -77,23 +78,56 @@ class Exporter:
     def rank_by_x(self):
         df = self.dataframe
         df['RankGroup'] = df['GroupRel'].rank(method='min', ascending=False).astype(int)
+
+        tmp = df['RankGroup'].values
+        tmp_norm = np.interp(tmp, (tmp.min(), tmp.max()), (0,10))
+
+        df['RankGroup'] = tmp_norm
     
     # ranking by y, stakeholders relevance
     def rank_by_y(self):
         df = self.dataframe
         df['RankStake'] = df['StakeRel'].rank(method='min', ascending=False).astype(int)
 
+        tmp = df['RankStake'].values
+        tmp_norm = np.interp(tmp, (tmp.min(), tmp.max()), (0,10))
+
+        df['RankStake'] = tmp_norm
+
     # ranking by (x,y), both group and stakeholders
     def rank_absolute(self):
         df = self.dataframe
         df['RankAbsolute'] = df[['GroupRel', 'StakeRel']].apply(tuple, axis=1).rank(method='min', ascending=False).astype(int)
+
+        tmp = df['RankAbsolute'].values
+        tmp_norm = np.interp(tmp, (tmp.min(), tmp.max()), (0,10))
+
+        df['RankAbsolute'] = tmp_norm
 
     def add_ranking(self):
         self.rank_by_x()
         self.rank_by_y()
         self.rank_absolute()
 
-        print('Added rankings by group, stakeholders and absolute relevances:')
+        print('\nAdded rankings by group, stakeholders and absolute relevances:')
+        print(self.dataframe.head())
+
+    def alignment(self, point):
+        # y = ax + by + c
+        # being the diagonal line we have the following values
+        a = 1
+        b = -1
+        c = 0
+
+        dist = abs((a*point[0]) + (b*point[1]) + c)/np.sqrt(a**2 + b**2)
+        
+        return dist
+
+    def add_alignment(self):
+        df = self.dataframe
+        df['Alignment'] = df[['GroupRel', 'StakeRel']].apply(tuple, axis=1).apply(self.alignment)
+
+        print('Added alignment measures:')
         print(self.dataframe.head())
 
     def export_dataset(self):
@@ -113,7 +147,20 @@ class Exporter:
     def compose_export_dataset(self):
         self.compose_dataset()
         self.add_ranking()
+        self.add_alignment()
         self.export_dataset()
+
+    def draw_perpendicular_distance(self, axis, point_x, point_y):
+        m_r = 1
+        q_r = 0
+
+        m_s = -1/m_r
+        q_s = point_y - m_s * point_x
+
+        x_perpendicular = (q_s - q_r) / (m_r - m_s)
+        y_perpendicular = m_r * x_perpendicular
+
+        axis.plot([point_x, x_perpendicular], [point_y, y_perpendicular], linestyle='--', color='orange')
 
     def compose_export_plot(self):
         n_points = len(self.dataframe)
@@ -136,6 +183,7 @@ class Exporter:
 
         # generating the scatterplot
         scatter = ax.scatter(self.dataframe['GroupRel'], self.dataframe['StakeRel'], c=[label_mapping[label] for label in self.dataframe['Label']], edgecolors=[kind_colors[kind] for kind in self.dataframe['Kind']], cmap='tab20')
+        self.draw_perpendicular_distance(ax, self.dataframe['GroupRel'], self.dataframe['StakeRel'])
 
         # generating colormaps
         label_cmap = cm.get_cmap('tab20', len(self.dataframe['Label'].unique()))
