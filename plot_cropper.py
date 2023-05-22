@@ -20,11 +20,13 @@ class Cropper:
             self.__image_debug = self.__image.copy()
 
             self.__scale_factor = scale_factor
+            
+            tmp_original = cv2.resize(self.__image, self.__scale_size)
+            tmp_work = cv2.resize(self.__work_image, self.__scale_size)
 
-            tmp = cv2.resize(self.__work_image, self.__scale_size)
-
-            cv2.imshow('threshold', tmp)
-            cv2.waitKey(0)
+            cv2.imshow('Finding image limits', tmp_original)
+            cv2.imshow('Finding image limits', tmp_work)
+            cv2.waitKey(1500)
 
     @property
     def image_size(self):
@@ -69,8 +71,8 @@ class Cropper:
         if self.__debug_mode:
             tmp = cv2.resize(self.__image_debug, self.__scale_size)
 
-            cv2.imshow('lines detected', tmp)
-            cv2.waitKey(0)
+            cv2.imshow('Finding image limits', tmp)
+            cv2.waitKey(1500)
 
     # finds the intersection point between lines
     # in order to detect the vertices that defines
@@ -84,8 +86,8 @@ class Cropper:
 
             tmp = cv2.resize(self.__image_debug, self.__scale_size)
 
-            cv2.imshow('intersections', tmp)
-            cv2.waitKey(0)
+            cv2.imshow('Finding image limits', tmp)
+            cv2.waitKey(1500)
 
     # using a scale 1:3 (we know that the materiality matrices contains 3x3 blocks)
     # we find the vertices defining the entire plot
@@ -128,8 +130,9 @@ class Cropper:
             cv2.circle(self.__image_debug, b_bottom_right, 3, (255, 255, 0), 3)
 
             tmp = cv2.resize(self.__image_debug, self.__scale_size)
-            cv2.imshow('plot', tmp)
-            cv2.waitKey(0)
+            cv2.imshow('Finding image limits', tmp)
+            cv2.waitKey(1500)
+            cv2.destroyAllWindows()
         
         return b_top_left, b_bottom_right
 
@@ -158,8 +161,8 @@ class Cropper:
             tmp_plot = cv2.resize(plot, tmp_plot_r_size)
             tmp_leg = cv2.resize(legend, tmp_leg_r_size)
 
-            cv2.imshow('plot', tmp_plot)
-            cv2.imshow('legend', tmp_leg)
-            cv2.waitKey(0)
+            cv2.imshow('Plot OCR', tmp_plot)
+            cv2.imshow('Legend OCR', tmp_leg)
+            cv2.waitKey(1500)
 
         return plot, legend

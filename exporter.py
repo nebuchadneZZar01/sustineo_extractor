@@ -53,20 +53,20 @@ class Exporter:
 
     # function that makes a pandas dataframe
     # containing the extracted data
-    def compose_dataset(self):
+    def __compose_dataset(self):
         datas = []
 
         for lb in self.plot_data:
-            kind = None
+            kind = 'Unknown'
             for legb in self.legend_data:
                 if legb.color == lb.color_rgb:
                     kind = legb.label
             group_value = self.__renormalize_x_group(lb.center[0], 0, 300)
             stake_value = self.__renormalize_y_stake(lb.center[1], 0, 300)
             
-            datas.append((lb.label, group_value, stake_value, kind))
+            datas.append((lb.label, kind, group_value, stake_value))
 
-        self.__dataframe = pd.DataFrame(datas, columns=('Label', 'GroupRel', 'StakeRel', 'Kind'))
+        self.__dataframe = pd.DataFrame(datas, columns=('Label', 'Kind', 'GroupRel', 'StakeRel'))
         
         # removing last blank char
         self.__dataframe['Label'] = self.__dataframe.apply(lambda x: x['Label'][:-1], axis = 1)
@@ -75,9 +75,9 @@ class Exporter:
         print(self.__dataframe.head())
 
     # ranking by x, group relevance
-    def rank_by_x(self):
+    def __rank_by_x(self):
         df = self.dataframe
-        df['RankGroup'] = df['GroupRel'].rank(method='min', ascending=False).astype(int)
+        df['RankGroup'] = df['GroupRel'].rank(method='min', ascending=True).astype(int)
 
         tmp = df['RankGroup'].values
         tmp_norm = np.interp(tmp, (tmp.min(), tmp.max()), (0,10))
@@ -85,9 +85,9 @@ class Exporter:
         df['RankGroup'] = tmp_norm
     
     # ranking by y, stakeholders relevance
-    def rank_by_y(self):
+    def __rank_by_y(self):
         df = self.dataframe
-        df['RankStake'] = df['StakeRel'].rank(method='min', ascending=False).astype(int)
+        df['RankStake'] = df['StakeRel'].rank(method='min', ascending=True).astype(int)
 
         tmp = df['RankStake'].values
         tmp_norm = np.interp(tmp, (tmp.min(), tmp.max()), (0,10))
@@ -95,24 +95,24 @@ class Exporter:
         df['RankStake'] = tmp_norm
 
     # ranking by (x,y), both group and stakeholders
-    def rank_absolute(self):
+    def __rank_absolute(self):
         df = self.dataframe
-        df['RankAbsolute'] = df[['GroupRel', 'StakeRel']].apply(tuple, axis=1).rank(method='min', ascending=False).astype(int)
+        df['RankAbsolute'] = df[['GroupRel', 'StakeRel']].apply(tuple, axis=1).rank(method='min', ascending=True).astype(int)
 
         tmp = df['RankAbsolute'].values
         tmp_norm = np.interp(tmp, (tmp.min(), tmp.max()), (0,10))
 
         df['RankAbsolute'] = tmp_norm
 
-    def add_ranking(self):
-        self.rank_by_x()
-        self.rank_by_y()
-        self.rank_absolute()
+    def __add_ranking(self):
+        self.__rank_by_x()
+        self.__rank_by_y()
+        self.__rank_absolute()
 
         print('\nAdded rankings by group, stakeholders and absolute relevances:')
         print(self.dataframe.head())
 
-    def alignment(self, point):
+    def __alignment(self, point):
         # y = ax + by + c
         # being the diagonal line we have the following values
         a = 1
@@ -123,14 +123,14 @@ class Exporter:
         
         return dist
 
-    def add_alignment(self):
+    def __add_alignment(self):
         df = self.dataframe
-        df['Alignment'] = df[['GroupRel', 'StakeRel']].apply(tuple, axis=1).apply(self.alignment)
+        df['Alignment'] = df[['GroupRel', 'StakeRel']].apply(tuple, axis=1).apply(self.__alignment)
 
         print('Added alignment measures:')
         print(self.dataframe.head())
 
-    def export_dataset(self):
+    def __export_dataset(self):
         img_extension = self.__image_fn[-3:len(self.__image_fn)]
 
         out_dir = os.path.join('out', 'csv')
@@ -145,12 +145,13 @@ class Exporter:
         print('\nExtracted data was exported to {fn}'.format(fn = out_path))
 
     def compose_export_dataset(self):
-        self.compose_dataset()
-        self.add_ranking()
-        self.add_alignment()
-        self.export_dataset()
+        self.__compose_dataset()
+        self.__add_ranking()
+        self.__add_alignment()
+        self.__export_dataset()
 
-    def draw_perpendicular_distance(self, axis, point_x, point_y):
+    # draws distance between singular point and diagonal/alignment line
+    def __draw_perpendicular_distance(self, axis, point_x, point_y):
         m_r = 1
         q_r = 0
 
@@ -160,7 +161,7 @@ class Exporter:
         x_perpendicular = (q_s - q_r) / (m_r - m_s)
         y_perpendicular = m_r * x_perpendicular
 
-        axis.plot([point_x, x_perpendicular], [point_y, y_perpendicular], linestyle='--', color='orange')
+        axis.plot([point_x, x_perpendicular], [point_y, y_perpendicular], linestyle='--', color='orange', label='Alignment distance')
 
     def compose_export_plot(self):
         n_points = len(self.dataframe)
@@ -179,11 +180,13 @@ class Exporter:
 
         fig, ax = plt.subplots(figsize=(fig_width,fig_height))
         ax.grid(linestyle = '--')                               
-        ax.axline((0,0), slope=1, linestyle='-', color='red')               # alignment line
+        ax.axline((0,0), slope=1, linestyle='-', color='red', label='Perfect alignment')               # alignment line
 
         # generating the scatterplot
-        scatter = ax.scatter(self.dataframe['GroupRel'], self.dataframe['StakeRel'], c=[label_mapping[label] for label in self.dataframe['Label']], edgecolors=[kind_colors[kind] for kind in self.dataframe['Kind']], cmap='tab20')
-        self.draw_perpendicular_distance(ax, self.dataframe['GroupRel'], self.dataframe['StakeRel'])
+        scatter = ax.scatter(self.dataframe['GroupRel'], self.dataframe['StakeRel'], c=[label_mapping[label] for label in self.dataframe['Label']], edgecolors=[kind_colors[kind] for kind in self.dataframe['Kind']], cmap='tab20', marker='o', linewidth=2, s=[100 for el in range(len(label_mapping))])
+        self.__draw_perpendicular_distance(ax, self.dataframe['GroupRel'], self.dataframe['StakeRel'])
+        handles, labels = plt.gca().get_legend_handles_labels()
+        by_label = dict(zip(labels, handles))
 
         # generating colormaps
         label_cmap = cm.get_cmap('tab20', len(self.dataframe['Label'].unique()))
@@ -192,12 +195,19 @@ class Exporter:
         kind_cmap = cm.get_cmap('tab20', len(self.dataframe['Kind'].unique()))
         kind_legend_elements = [Patch(facecolor=kind_cmap(i), edgecolor=kind_cmap(i), label=kind) for i, kind in enumerate(self.dataframe['Kind'].unique())]
 
-        # generating legends
-        ax.legend(handles=label_legend_elements, title='Label', loc = 'lower left', bbox_to_anchor=(0, 1))
+        # # generating legends
+        # line legend
+        ax.legend(by_label.values(), by_label.keys())
 
+        # label legend
         ax2 = ax.twinx()
-        ax2.legend(handles=kind_legend_elements, title='Kind', loc = 'lower right', bbox_to_anchor=(1, 1))
+        ax2.legend(handles=label_legend_elements, title='Label', loc = 'lower left', bbox_to_anchor=(0, 1))
         ax2.axis('off')
+
+        # kind legend
+        ax3 = ax2.twinx()
+        ax3.legend(handles=kind_legend_elements, title='Kind', loc = 'lower right', bbox_to_anchor=(1, 1))
+        ax3.axis('off')
 
         ax.set_xlabel('Group Relevance')
         ax.set_ylabel('Stakeholders Relevance')

@@ -6,8 +6,10 @@ A `python` software for materiality matrices extraction.
 - [Usage](#usage)
   - [Dependencies](#dependencies)
   - [Installation](#installation)
+  - [Tested environments](#tested-environments)
   - [Execution](#execution)
   - [Docker](#docker)
+  - [Output](#csv-format-file)
 - [Author](#author)
 
 
@@ -90,6 +92,8 @@ The collected data are gathered in a `pandas` **dataframe** and then exported in
 #### 4.3 PNG export
 The `pandas` dataframe data are used to generate a plot using the `matplotlib` module, that is then saved on the disk.
 
+##### 
+
 ## Usage
 ### Dependencies
 - Python 3.10
@@ -97,6 +101,14 @@ The `pandas` dataframe data are used to generate a plot using the `matplotlib` m
 - `opencv-python` python module
 - `pytesseract` python module
 - `matplotlib` python module
+
+### Tested Environments
+| Environment | Works |
+|:-----------:|:-----:|
+| Linux | ✅ |
+| Docker | ✅ |
+| Windows | ❔ |
+| MacOS | ❔ |
 
 ### Installation
 At first, you need to install the `tesseract-ocr` package, using the package manager of your distribution.\
@@ -176,6 +188,43 @@ Respectively, we will have the csv outputs in `/out/csv` and the png ones in `/o
       |---- img
             |---- output.png
 ```
+
+##### CSV-format file
+Given the input, the output dataset will be the following one:
+
+| ID | Label | Kind | GroupRel | StakeRel | RankGroup | RankStake | RankAbsolute | Alignment |
+|:--:|:-----:|:----:|:--------:|:--------:|:---------:|:---------:|:------------:|:---------:|
+| 0 | Protezione della privacy | Unknown | 0.0 | 0.0 | 10.0 | 10.0 | 10.0 | 0.0 | 
+| 1 | Educazione e sensibilizzazione del consumatore | Unknown | 82.84734133790738 | 44.6629213483146 | 7.6923076923076925 | 9.230769230769232 | 7.6923076923076925 | 27.000462310316212 | 
+| 2 | Emissioni in atmosfera | Unknown | 163.63636363636363 | 51.82584269662922 | 5.384615384615385 | 8.461538461538462 | 5.384615384615385 | 79.06197756448665 |
+| 3 | Diversit e inclusione | Persone | 27.015437392795885 | 90.58988764044943 | 8.461538461538462 | 7.6923076923076925 | 8.461538461538462 | 44.9539248803226 |
+| 4 | Tutela del suolo e della biodiversit | Unknown | 20.840480274442537 | 118.82022471910113 | 9.230769230769232 | 6.153846153846154 | 9.230769230769232 | 69.28214171574304 |
+| 5 | Centralit e benessere del dipendente | Persone | 169.81132075471697 | 154.2134831460674 | 4.615384615384616 | 4.615384615384616 | 4.615384615384616 | 11.029336744922672 |
+| 6 | Sviluppo professionale dei dipendenti | Persone | 130.96054888507717 | 108.2865168539326 | 6.923076923076923 | 6.923076923076923 | 6.923076923076923 | 16.032961806063316 |
+| 7 | Benessere degli animali | Unknown | 280.4459691252144 | 173.1741573033708 | 1.5384615384615385 | 3.8461538461538463 | 1.5384615384615385 | 75.85262556939284 |
+| 8 | "Trasparenza |  tracciabilit e circolarit della filiera" | Unknown | 262.43567753001713 | 145.7865168539326 | 3.076923076923077 | 5.384615384615385 | 3.076923076923077 | 82.48341253377852 |
+| 9 | "Economia circolare |  valorizzazione scarti e gestione rifiuti" | Unknown | 300.0 | 224.1573033707865 | 0.0 | 3.076923076923077 | 0.0 | 53.628885089990966 |
+| 10 | Gestione della risorse idriche | Unknown | 143.82504288164665 | 243.11797752808988 | 6.153846153846154 | 2.307692307692308 | 6.153846153846154 | 70.21070741241269
+| 11 | Qualit del prodotto e attenzione al consumatore | Unknown | 290.99485420240137 | 262.07865168539325 | 0.7692307692307693 | 1.5384615384615385 | 0.7692307692307693 | 20.44684288593995
+| 12 | Salute e sicurezza dei lavoratori | Persone | 180.87478559176674 | 295.36516853932585 | 3.8461538461538463 | 0.7692307692307693 | 3.8461538461538463 | 80.95692616286371 |
+| 13 | Efficientamento energetico e lotta al cambiamento climatico | Unknown | 271.6981132075472 | 300.0 | 2.307692307692308 | 0.0 | 2.307692307692308 | 20.012456071317374 |
+
+where:
+- `Label` is the label of the point, extracted via OCR;
+- `Kind` is the materiality component of that point, that is relative to the `Label`;
+- `GroupRel` is the relevance of the materiality component according to the **group**;
+- `StakeRel` is the relevance of the materiality component according to the **stakeholders**;
+- `RankGroup` is the ranking (in $[0,10]$) given to the **group**, according to the relevance of the materiality component; the higher the ranking is, the higher is the relevance for the group;
+- `RankStake` is the ranking (in $[0,10]$) given to the **stakeholders**, according to the relevance of the materiality component; the higher the ranking is, the higher is the relevance for the group;
+- `RankAbsolute` is the ranking in ($[0,10]$) given to both the **group** and the **stakeholders**;
+- `Alignment` is the alignment measure from the perfect alignment: the higher this value it is, the worst is the alignment compared to the perfect one.
+
+##### PNG-format file
+You can obtain an output like the following:
+
+![image](out/img/amadori2.png)
+
+The perfect alignment line, passing through the origin, means the perfect alignment of the relevance of that materiality component according to the both the group and the stakeholders (that means, the relevance is the same accoring to both); the alignment distance is the distance to this perfect alignment.
 
 ### Docker
 If you have Docker installed in your personal environment, in this repo is also provided a `Dockerfile`, making you able to build a docker image of the project, without installing any package.

@@ -11,10 +11,6 @@ def main(image_dir, language, scale_visualization, debug_mode):
     new_size = (int(image_size[1]/scale_visualization), int(image_size[0]/scale_visualization))
     image_scaled = cv2.resize(image, new_size)
 
-    if debug_mode:
-        cv2.imshow('original', image_scaled)
-        cv2.waitKey(0)
-
     m = Cropper(image, debug_mode, scale_visualization)
     plot, legend = m.separate_image()
 

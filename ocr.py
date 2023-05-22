@@ -77,8 +77,8 @@ class PlotOCR(OCR):
 		if self.debug_mode:
 			tmp = cv2.resize(dilated_shapes, self.scale_size)
 
-			cv2.imshow('shapes', tmp)
-			cv2.waitKey(0)
+			cv2.imshow('Plot OCR', tmp)
+			cv2.waitKey(1500)
 
 		contours, _ = cv2.findContours(dilated_shapes, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -250,10 +250,10 @@ class PlotOCR(OCR):
 						res = res.loc[res['conf'] != -1]
 
 						if self.debug_mode:
-							tmp = cv2.resize(self.__work_image, self.__scale_size)
+							tmp = cv2.resize(self.__work_image, self.scale_size)
 
-							cv2.imshow('negative', tmp)
-							cv2.waitKey(0)
+							cv2.imshow('Plot OCR', tmp)
+							cv2.waitKey(1500)
 					break
 			lett_cnt += 1
 
@@ -330,10 +330,12 @@ class PlotOCR(OCR):
 		scaled_threshold = cv2.resize(self.__work_image, self.scale_size)
 		scaled_grayscale = cv2.resize(self.image_debug, self.scale_size)
 		
-		cv2.imshow('grayscale', scaled_grayscale)
-		cv2.imshow('threshold ocr', scaled_threshold)
-		cv2.imshow('ocr', scaled_image)
-		cv2.waitKey(0)
+		cv2.imshow('Plot OCR', scaled_grayscale)
+		cv2.imshow('Plot OCR', scaled_threshold)
+		cv2.imshow('Plot OCR', scaled_image)
+		cv2.waitKey(1500)
+		cv2.destroyWindow('Plot OCR')
+
 	
 	def get_image_work(self):
 		return self.__work_image
@@ -385,8 +387,8 @@ class LegendOCR(OCR):
 		if debug_mode:
 			tmp = cv2.resize(self.__work_image, self.scale_size)
 
-			cv2.imshow('legend shapes', tmp)
-			cv2.waitKey(0)
+			cv2.imshow('Legend OCR', tmp)
+			cv2.waitKey(1500)
 
 	def __process_text(self):
 		res = pt.image_to_data(self.__work_image, lang=self.language, output_type = pt.Output.DICT)
@@ -426,10 +428,13 @@ class LegendOCR(OCR):
 			mask = cv2.inRange(image_hsv, c, c)
 
 			if self.debug_mode:
-				cv2.imshow('hsv', image_hsv)
-				cv2.imshow('mask {n}'.format(n=i), mask)
+				tmp_hsv = cv2.resize(image_hsv, self.scale_size)
+				tmp_mask = cv2.resize(mask, self.scale_size)
 
-				cv2.waitKey(0)
+				cv2.imshow('Legend OCR', tmp_hsv)
+				cv2.imshow('Legend OCR', tmp_mask)
+
+				cv2.waitKey(1500)
 				i += 1
 
 			# finds the points where the mask is not zero
@@ -494,7 +499,8 @@ class LegendOCR(OCR):
 		scaled_threshold = cv2.resize(self.__work_image, self.scale_size)
 		scaled_grayscale = cv2.resize(self.image_gray, self.scale_size)
 		
-		cv2.imshow('legend grayscale', scaled_grayscale)
-		cv2.imshow('legend threshold ocr', scaled_threshold)
-		cv2.imshow('legend ocr', scaled_image)
-		cv2.waitKey(0)
+		cv2.imshow('Legend OCR', scaled_grayscale)
+		cv2.imshow('Legend OCR', scaled_threshold)
+		cv2.imshow('Legend OCR', scaled_image)
+		cv2.waitKey(1500)
+		cv2.destroyAllWindows()
