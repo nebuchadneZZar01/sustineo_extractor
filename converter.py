@@ -32,11 +32,41 @@ class PDFToImage:
             text = self.__pdf_doc[page].get_text()
             
             if self.__lang_dict[self.__lang] in text.lower():
-                pix = self.__pdf_doc[page].get_pixmap(matrix=self.__magnify)
-                pix.set_dpi(DPI, DPI)
-                im = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.h, pix.w, pix.n)
-                im = np.ascontiguousarray(im[..., [2, 1, 0]])          # rgb to bgr
-                self.__out_img_pages.append((im, self.__filename, page))
+                # getting the text-image
+                pix_text = self.__pdf_doc[page].get_pixmap(matrix=self.__magnify)
+                pix_text.set_dpi(DPI, DPI)
+                im_text = np.frombuffer(pix_text.samples, dtype=np.uint8).reshape(pix_text.h, pix_text.w, pix_text.n)
+                im_text = np.ascontiguousarray(im_text[..., [2, 1, 0]])          # rgb to bgr
+
+                # getting the textless-image
+                paths = self.__pdf_doc[page].get_drawings()
+                page_textless = self.__pdf_doc.new_page(width=self.__pdf_doc[page].rect.width, height=self.__pdf_doc[page].rect.height)
+                shape = page_textless.new_shape()
+
+                for path in paths:
+                    # draw each entry of the 'items' list
+                    for item in path["items"]:                                              # these are the draw commands
+                        if item[0] == "l":                                                  # line
+                            shape.draw_line(item[1], item[2])
+                        elif item[0] == "re":                                               # rectangle
+                            shape.draw_rect(item[1])
+                        elif item[0] == "qu":                                               # quad
+                            shape.draw_quad(item[1])
+                        elif item[0] == "c":                                                # curve
+                            shape.draw_bezier(item[1], item[2], item[3], item[4])
+                        else:
+                            raise ValueError("unhandled drawing", item)
+
+                    shape.finish()
+
+                shape.commit()
+
+                pix_textless = page_textless.get_pixmap(matrix=self.__magnify)
+                pix_textless.set_dpi(DPI, DPI)
+                im_textless = np.frombuffer(pix_textless.samples, dtype=np.uint8).reshape(pix_textless.h, pix_textless.w, pix_textless.n)
+                im_textless = np.ascontiguousarray(im_textless[..., [2, 1, 0]])
+
+                self.__out_img_pages.append((im_text, im_textless, self.__filename, page))
 
     def __calc_y(self, x, rho, theta):
         if theta == 0:
@@ -60,11 +90,15 @@ class PDFToImage:
 
     def __img_to_plot(self):
         for page in self.__out_img_pages:
-            print('Processing page {pg}...'.format(pg = page[2]))
-            resize = (int(page[0].shape[1]/3.5), int(page[0].shape[0]/3.5))
+            # page[0] -> original image
+            # page[1] -> vectors image
+            # page[2] -> filename
+            # page[3] -> page number
+            print('Processing {file}.pdf page {pg}...'.format(file = page[2], pg = page[3]))
+            resize = (int(page[1].shape[1]/3.5), int(page[1].shape[0]/3.5))
 
-            page_copy = page[0].copy()
-            page_gray = cv2.cvtColor(page[0], cv2.COLOR_BGR2GRAY)
+            page_copy = page[1].copy()
+            page_gray = cv2.cvtColor(page_copy, cv2.COLOR_BGR2GRAY)
             thresh = cv2.threshold(page_gray, 180, 255, cv2.THRESH_BINARY)[1]
             res = pt.image_to_data(thresh, lang=self.__lang, output_type = pt.Output.DICT)
             res = pd.DataFrame(res)
@@ -89,7 +123,7 @@ class PDFToImage:
             if self.__debug_mode:
                 tmp_res = cv2.resize(page_copy, resize)
                 cv2.imshow('Finding materiality matrix', tmp_res)
-                cv2.waitKey(0)
+                cv2.waitKey(1500)
 
             image_gray = cv2.cvtColor(page_copy, cv2.COLOR_BGR2GRAY)
             _, work_image = cv2.threshold(image_gray, 180, 255, cv2.THRESH_BINARY)
@@ -120,7 +154,7 @@ class PDFToImage:
                 if self.__debug_mode:
                     tmp_res = cv2.resize(tmp, resize)
                     cv2.imshow('Finding materiality matrix', tmp_res)
-                    cv2.waitKey(0)
+                    cv2.waitKey(1500)
 
                 tups = [(r, c) for r in rows for c in columns]
 
@@ -130,61 +164,60 @@ class PDFToImage:
                         tmp_res = cv2.resize(tmp, resize)
 
                     cv2.imshow('Finding materiality matrix', tmp_res)
-                    cv2.waitKey(0)
+                    cv2.waitKey(1500)
 
                 rows.sort(); columns.sort(reverse=True)
 
                 try:
-                    # print('rows:', rows)
-                    # print('columns:', columns)
-                    
-                    l_bottom_left = (rows[0], columns[0])
-                    l_bottom_right = (rows[2], columns[0])
-                    l_top_left = (rows[0], columns[3])
-
-                    # size of the rectangle's edges
-                    l_w = l_bottom_right[0] - l_bottom_left[0]
-                    l_h = l_bottom_left[1] - l_top_left[1]
+                    # intersection delimiter points
+                    i_bottom_left = (rows[0], columns[0])               
+                    i_bottom_right = (rows[-1], columns[0])
+                    i_top_left = (rows[0], columns[-1])
+                    i_top_right = (rows[-1], columns[-1])
 
                     if self.__debug_mode:
-                        cv2.circle(tmp, l_bottom_left, 6, (0, 255, 0), 3)
-                        cv2.circle(tmp, l_bottom_right, 6, (0, 255, 0), 3)
-                        cv2.circle(tmp, l_top_left, 3, (0, 255, 0), 3)
+                        cv2.circle(tmp, i_bottom_left, 6, (0, 255, 0), 3)
+                        cv2.circle(tmp, i_bottom_right, 6, (0, 255, 0), 3)
+                        cv2.circle(tmp, i_top_left, 6, (0, 255, 0), 3)
+                        cv2.circle(tmp, i_top_right, 6, (0, 255, 0), 3)
 
                         tmp_res = cv2.resize(tmp, resize)
                         cv2.imshow('Finding materiality matrix', tmp_res)
-                        cv2.waitKey(0)
+                        cv2.waitKey(1500)
 
-                    b_h = 3 * l_h
-                    b_w = 3 * l_w
+                    v_offset = 350                              # vertical offset
 
-                    # vertices delimiting the rectangle
-                    b_bottom_left = l_bottom_left
-                    # if the vertex calculated coordinates are beyond the image size
-                    # then it is set exactly on the border of the image
-                    b_top_left = (l_bottom_left[0], l_bottom_left[1] - b_h) if (l_bottom_left[1] - b_h) > 0 else (l_bottom_left[0], 0)
-                    b_bottom_right = (l_bottom_left[0] + b_w, l_bottom_left[1]) if (l_bottom_left[0] + b_w < tmp.shape[0]) else (tmp.shape[0], l_bottom_left[1])
-
-                    v_offset = 400                              # vertical offset
-                    h_offset = 200                              # horizontal offset
-
-                    bottom_right = (b_bottom_right[0] + h_offset, b_bottom_right[1] + v_offset)
-                    top_left = (b_top_left[0] - h_offset, b_top_left[1])
-
-                    w = top_left[0] - bottom_right[0] if (top_left[0] - bottom_right[0]) > 0 else -1 * (top_left[0] - bottom_right[0])
-                    h = bottom_right[1] - top_left[0] if (bottom_right[1] - top_left[0]) > 0 else -1 * (bottom_right[1] - top_left[0])
+                    # final cropped area delimiters
+                    top_left = (0, i_top_left[1] - v_offset) if (i_top_left[1] - v_offset > 0) else (0, 0)
+                    bottom_right = (width, i_bottom_right[1] + v_offset) if (i_bottom_right[1] + v_offset < height) else (width, height)
 
                     mat_matrix = page[0][top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
                     
-                    fn_out = page[1] + '_' + str(page[2]) + '.png'
+                    fn_out = page[2] + '_' + str(page[3]) + '.png'
                     
-                    if self.__debug_mode:
-                        tmp = cv2.resize(mat_matrix, (int(mat_matrix.shape[1]/3), int(mat_matrix.shape[0]/3)))
-                        cv2.imshow('Finding materiality matrix', tmp)
+                    tmp = cv2.resize(mat_matrix, (int(mat_matrix.shape[1]/3), int(mat_matrix.shape[0]/3)))
+                    cv2.imshow('Finding materiality matrix', tmp)
+
+                    cv2.waitKey(0)
+
+                    choice = input('Is this crop ok? [Y/n] ')
+
+                    cv2.destroyAllWindows()
+
+                    if choice.lower()[0] == 'y':
+                        cv2.imwrite(os.path.join(self.__out_path, fn_out), mat_matrix)
+                        print(fn_out, 'was wrote in', self.__out_path)
+                    else:
+                        resized_page = cv2.resize(page[0], resize)
+                        roi = cv2.selectROI('Select the region of interest', resized_page)
+                        mat_matrix = page[0][int(roi[1]*3.5):int(roi[1]*3.5) + int(roi[3]*3.5), int(roi[0]*3.5):int(roi[0]*3.5) + int(roi[2]*3.5)]
+                        resize_mat_matrix = (int(mat_matrix.shape[1]/3.5), int(mat_matrix.shape[0]/3.5))
+                        tmp = cv2.resize(mat_matrix, resize_mat_matrix)
+                        cv2.imshow('Selected materiality matrix', tmp)
                         cv2.waitKey(0)
 
-                    cv2.imwrite(os.path.join(self.__out_path, fn_out), mat_matrix)
-                    print(fn_out, 'was wrote in', self.__out_path)
+                        cv2.imwrite(os.path.join(self.__out_path, fn_out), mat_matrix)
+                        print(fn_out, 'was wrote in', self.__out_path)
                 except:
                     print('Not-legit intersection found, skipping to next page...')
                     continue
