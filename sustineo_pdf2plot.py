@@ -7,11 +7,11 @@ import numpy as np
 import pandas as pd
 import pytesseract as pt
 
-DPI = 300
-ZOOM = DPI/72
+DPI = 300                       # image DPI
+ZOOM = DPI/72                   # image zoom
 
 class PDFToImage:
-    def __init__(self, path, language, debug_mode = False):
+    def __init__(self, path = str, language = str, debug_mode = False):
         self.__path = path
         self.__filename = os.path.basename(self.__path)[:-4]
 
@@ -39,6 +39,7 @@ class PDFToImage:
                 im_text = np.ascontiguousarray(im_text[..., [2, 1, 0]])          # rgb to bgr
 
                 # getting the textless-image
+                # it is formed only of not-colored vector-type shapes
                 paths = self.__pdf_doc[page].get_drawings()
                 page_textless = self.__pdf_doc.new_page(width=self.__pdf_doc[page].rect.width, height=self.__pdf_doc[page].rect.height)
                 shape = page_textless.new_shape()
@@ -68,12 +69,14 @@ class PDFToImage:
 
                 self.__out_img_pages.append((im_text, im_textless, self.__filename, page))
 
+    # calculate y in Hough transform
     def __calc_y(self, x, rho, theta):
         if theta == 0:
             return rho
         else:
             return (-math.cos(theta) / math.sin(theta)) * x + (rho / math.sin(theta))
     
+    # calculates (x,y) in Hough transform 
     def __polar_to_xy(self, rho, theta, width):
         if theta == 0:
             x1 = rho
@@ -88,6 +91,7 @@ class PDFToImage:
 
         return (int(x1), int(y1)), (int(x2), int(y2))
 
+    # crops the image-format page using the Hough transform
     def __img_to_plot(self):
         for page in self.__out_img_pages:
             # page[0] -> original image
@@ -170,10 +174,10 @@ class PDFToImage:
 
                 try:
                     # intersection delimiter points
-                    i_bottom_left = (rows[0], columns[0])               
-                    i_bottom_right = (rows[-1], columns[0])
-                    i_top_left = (rows[0], columns[-1])
-                    i_top_right = (rows[-1], columns[-1])
+                    i_bottom_left = (rows[0], columns[0])                                                               # first x coord, first y coord
+                    i_bottom_right = (rows[-1], columns[0])                                                             # least x coord, first y coord
+                    i_top_left = (rows[0], columns[-1])                                                                 # first x coord, least y coord
+                    i_top_right = (rows[-1], columns[-1])                                                               # least x coord, first y coord
 
                     if self.__debug_mode:
                         cv2.circle(tmp, i_bottom_left, 6, (0, 255, 0), 3)
@@ -191,33 +195,42 @@ class PDFToImage:
                     top_left = (0, i_top_left[1] - v_offset) if (i_top_left[1] - v_offset > 0) else (0, 0)
                     bottom_right = (width, i_bottom_right[1] + v_offset) if (i_bottom_right[1] + v_offset < height) else (width, height)
 
-                    mat_matrix = page[0][top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
+                    mat_matrix = page[0][top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]                      # materiality matrix region
                     
-                    fn_out = page[2] + '_' + str(page[3]) + '.png'
+                    fn_out = page[2] + '_' + str(page[3]) + '.png'                                                      # output filename
                     
                     tmp = cv2.resize(mat_matrix, (int(mat_matrix.shape[1]/3), int(mat_matrix.shape[0]/3)))
                     cv2.imshow('Finding materiality matrix', tmp)
 
                     cv2.waitKey(0)
-
-                    choice = input('Is this crop ok? [Y/n] ')
-
                     cv2.destroyAllWindows()
 
-                    if choice.lower()[0] == 'y':
-                        cv2.imwrite(os.path.join(self.__out_path, fn_out), mat_matrix)
-                        print(fn_out, 'was wrote in', self.__out_path)
-                    else:
-                        resized_page = cv2.resize(page[0], resize)
-                        roi = cv2.selectROI('Select the region of interest', resized_page)
-                        mat_matrix = page[0][int(roi[1]*3.5):int(roi[1]*3.5) + int(roi[3]*3.5), int(roi[0]*3.5):int(roi[0]*3.5) + int(roi[2]*3.5)]
-                        resize_mat_matrix = (int(mat_matrix.shape[1]/3.5), int(mat_matrix.shape[0]/3.5))
-                        tmp = cv2.resize(mat_matrix, resize_mat_matrix)
-                        cv2.imshow('Selected materiality matrix', tmp)
-                        cv2.waitKey(0)
+                    # asking user if the cropped region is ok
+                    while True:
+                        choice = input('\nIs this crop ok? [Y/n] ')
+                        # automatic crop is ok
+                        if choice.lower()[0] == 'y':
+                            cv2.imwrite(os.path.join(self.__out_path, fn_out), mat_matrix)
+                            print('Materiality matrix image file was wrote in', os.path.join(self.__out_path, fn_out))
+                            break
+                        # user cropping
+                        elif choice.lower()[0] == 'n':
+                            resized_page = cv2.resize(page[0], resize)
+                            roi = cv2.selectROI('Select the region of interest', resized_page)
+                            mat_matrix = page[0][int(roi[1]*3.5):int(roi[1]*3.5) + int(roi[3]*3.5), int(roi[0]*3.5):int(roi[0]*3.5) + int(roi[2]*3.5)]
+                            resize_mat_matrix = (int(mat_matrix.shape[1]/3.5), int(mat_matrix.shape[0]/3.5))
+                            tmp = cv2.resize(mat_matrix, resize_mat_matrix)
+                            cv2.imshow('Selected materiality matrix', tmp)
+                            cv2.waitKey(0)
 
-                        cv2.imwrite(os.path.join(self.__out_path, fn_out), mat_matrix)
-                        print(fn_out, 'was wrote in', self.__out_path)
+                            cv2.imwrite(os.path.join(self.__out_path, fn_out), mat_matrix)
+                            print(fn_out, 'was wrote in', self.__out_path)
+                            break
+                        # invalid choice
+                        else:
+                            print('Invalid choice!')
+                            continue
+
                 except:
                     print('Not-legit intersection found, skipping to next page...')
                     continue
@@ -233,7 +246,7 @@ def main(pdf_path, language, debug):
     extr.run()
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(prog='sustineo_extractor',
+    parser = argparse.ArgumentParser(prog='sustineo_pdf2plot',
                                 description='This program extracts materiality matrices in raster-format from pdf files.\
                                             \nAuthor: nebuchadneZZar01 (Michele Ferro)\
                                             \nGitHub: https://github.com/nebuchadneZZar01/',\

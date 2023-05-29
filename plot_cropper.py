@@ -36,7 +36,7 @@ class Cropper:
     # using the Hough transform
     def find_delimiters(self):
         edges = cv2.Canny(self.__work_image, 50, 150, apertureSize=3)
-        lines = cv2.HoughLines(edges, 1, np.pi/180, 350)
+        lines = cv2.HoughLines(edges, 1, np.pi/180, 450)
 
         self.__rows = []
         self.__columns = []
@@ -99,9 +99,9 @@ class Cropper:
 
         # LITTLE RECTANGLE IN THE PLOT
         # vertices delimiting the rectangle
-        l_bottom_left = (self.__rows[0], self.__columns[0])
-        l_bottom_right = (self.__rows[2], self.__columns[0])
-        l_top_left = (self.__rows[0], self.__columns[3])
+        l_bottom_left = (self.__rows[0], self.__columns[0])                                 # first x coord, least y coord
+        l_bottom_right = (self.__rows[-1], self.__columns[0])                               # least x coord, first y coord
+        l_top_left = (self.__rows[0], self.__columns[-1])                                   # first x coord, least y coord
 
         # size of the rectangle's edges
         l_w = l_bottom_right[0] - l_bottom_left[0]

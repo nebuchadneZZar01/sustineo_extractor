@@ -10,6 +10,7 @@ A `python` software for materiality matrices extraction.
   - [Execution](#execution)
   - [Docker](#docker)
   - [Output](#csv-format-file)
+- [Addendum: PDF Converter](#addendum-pdf-converter)
 - [Author](#author)
 
 
@@ -107,11 +108,20 @@ The `pandas` dataframe data are used to generate a plot using the `matplotlib` m
 |:-----------:|:-----:|
 | Linux | ✅ |
 | Docker | ✅ |
-| Windows | ❔ |
+| Windows | ✅ |
 | MacOS | ❔ |
 
 ### Installation
-At first, you need to install the `tesseract-ocr` package, using the package manager of your distribution.\
+After ensuring that Python $\geq$ 3.10 is installed on your personal environment, install the required modules through the command:
+
+```
+pip install -r requirements.txt
+```
+
+Then, make a `git clone` of this repository or simply download it.
+
+#### Linux
+You need to install the `tesseract-ocr` package, using the package manager of your distribution.\
 Example with Debian:
 
 ```
@@ -121,7 +131,7 @@ sudo apt install tesseract-ocr -y
 If you want to add support for your language, you have to install the appropriate language
 
 ```
-sudo apt install tesseract-data-LAN -y
+sudo apt install tesseract-data-<LAN> -y
 ```
 
 where `LAN` are the first three characters of your language.
@@ -132,14 +142,15 @@ Example with Italian language:
 sudo apt install tesseract-data-ita -y
 ```
 
-
-After ensuring that Python $\geq$ 3.10 is installed on your personal environment, install the required modules through the command:
+#### Windows
+To install the `tesseract-ocr` package, you can use `winget` from Windows Terminal:
 
 ```
-pip install -r requirements.txt
+winget install tesseract-ocr
 ```
 
-Then, make a `git clone` of this repository or simply download it.
+Then, ensure that `tesseract-ocr` root folder is included in your `PATH` and reboot.
+To add language support, download the `<LAN>.traineddata` pre-trained model from the following [link](https://github.com/tesseract-ocr/tessdata), where `LAN` are the first three characters of your language, and put it in `tesseract-ocr` root folder.
 
 ### Execution
 Run the `main.py` script in the root of the cloned folder to execute the program.
@@ -202,8 +213,8 @@ Given the input, the output dataset will be the following one:
 | 5 | Centralit e benessere del dipendente | Persone | 169.81132075471697 | 154.2134831460674 | 4.615384615384616 | 4.615384615384616 | 4.615384615384616 | 11.029336744922672 |
 | 6 | Sviluppo professionale dei dipendenti | Persone | 130.96054888507717 | 108.2865168539326 | 6.923076923076923 | 6.923076923076923 | 6.923076923076923 | 16.032961806063316 |
 | 7 | Benessere degli animali | Unknown | 280.4459691252144 | 173.1741573033708 | 1.5384615384615385 | 3.8461538461538463 | 1.5384615384615385 | 75.85262556939284 |
-| 8 | "Trasparenza |  tracciabilit e circolarit della filiera" | Unknown | 262.43567753001713 | 145.7865168539326 | 3.076923076923077 | 5.384615384615385 | 3.076923076923077 | 82.48341253377852 |
-| 9 | "Economia circolare |  valorizzazione scarti e gestione rifiuti" | Unknown | 300.0 | 224.1573033707865 | 0.0 | 3.076923076923077 | 0.0 | 53.628885089990966 |
+| 8 | Trasparenza, tracciabilit e circolarit della filiera | Unknown | 262.43567753001713 | 145.7865168539326 | 3.076923076923077 | 5.384615384615385 | 3.076923076923077 | 82.48341253377852 |
+| 9 | Economia circolare, valorizzazione scarti e gestione rifiuti | Unknown | 300.0 | 224.1573033707865 | 0.0 | 3.076923076923077 | 0.0 | 53.628885089990966 |
 | 10 | Gestione della risorse idriche | Unknown | 143.82504288164665 | 243.11797752808988 | 6.153846153846154 | 2.307692307692308 | 6.153846153846154 | 70.21070741241269
 | 11 | Qualit del prodotto e attenzione al consumatore | Unknown | 290.99485420240137 | 262.07865168539325 | 0.7692307692307693 | 1.5384615384615385 | 0.7692307692307693 | 20.44684288593995
 | 12 | Salute e sicurezza dei lavoratori | Persone | 180.87478559176674 | 295.36516853932585 | 3.8461538461538463 | 0.7692307692307693 | 3.8461538461538463 | 80.95692616286371 |
@@ -233,6 +244,21 @@ Simply build the image using the Docker file with the `docker build` command, th
 
 ```
 docker run -v path/to/project/folder/:/app sustineo-extractor src/input.png
+```
+## Addendum: SustiNEO PDF to Plot
+In this repository is also included a `sustineo_pdf2plot.py` script, that allows to extract materiality matrices (in `PNG` format) from `PDF` files.
+
+Its behaviour its very simple and can be summarized in the following passes.
+1. **Interested string search**: in (almost) every sustainability report, the plot regarding materiality analysis is portrayed under the heading "materiality matrix" (depending on the plot language). The script searches every page where this string is present and ignores all the other ones.
+2. **Interested page conversion**: of every selected page, are made two conversion.
+      - RAW: The first conversion is a plain page in PNG format, which will be later used to make the cropping operations;
+      - Vector: the second one is another PNG format image, which instead contains only the vectorial data (it's a textless page containing only the plot shapes); this data will be later used to detect the plot.
+3. **Plot detection**: the plot is detected using the Hough transform on the image containing the vector data. The limiter vertices are given by the Hough lines intersections; their $(x,y)$ coordinates are then saved and used as points to crop the RAW image, in order to obtain the final plot. Then the plot is showed to the user.
+4. **User adjustment**: the prompt asks the user if the cropped area actually contains the plot; if affermative, the image in saved to the disk, otherwise the user can adjust the crop, making this operation manually.
+
+To invoke the script, use the command:
+```
+python sustineo_pdf2plot.py src/input.pdf
 ```
 
 ## Author

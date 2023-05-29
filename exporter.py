@@ -7,9 +7,10 @@ from matplotlib.patches import Patch
 
 class Exporter:
     def __init__(self, image_fn = str, plot_data = list, legend_data = list):
-        self.__image_fn = image_fn                
-        self.__plot_data = plot_data                  # data extracted using PlotOCR class
-        self.__legend_data = legend_data              # data extracted using PlotOCR class
+        self.__image_path = image_fn
+        self.__image_basename = os.path.basename(image_fn)
+        self.__plot_data = plot_data                            # data extracted using PlotOCR class
+        self.__legend_data = legend_data                        # data extracted using PlotOCR class
 
         self.__dataframe = None
 
@@ -131,14 +132,15 @@ class Exporter:
         print(self.dataframe.head())
 
     def __export_dataset(self):
-        img_extension = self.__image_fn[-3:len(self.__image_fn)]
+        img_extension = self.__image_basename[-3:len(self.__image_basename)]
 
         out_dir = os.path.join('out', 'csv')
+        print(out_dir)
 
         if not os.path.isdir(out_dir):
             os.mkdir(out_dir)
 
-        csv_fn = self.__image_fn.replace(img_extension, 'csv').replace('src/', '')
+        csv_fn = self.__image_basename.replace(img_extension, 'csv').replace('src/', '')
         out_path = os.path.join(out_dir, csv_fn)
 
         self.__dataframe.to_csv(out_path)
@@ -214,14 +216,14 @@ class Exporter:
         fig.tight_layout()
 
         # EXPORTATION SECTION
-        img_extension = self.__image_fn[-3:len(self.__image_fn)]
+        img_extension = self.__image_basename[-3:len(self.__image_basename)]
 
         out_dir = os.path.join('out', 'img')
 
         if not os.path.isdir(out_dir):
             os.mkdir(out_dir)
 
-        img_fn = self.__image_fn.replace(img_extension, 'png').replace('src/', '')
+        img_fn = self.__image_basename.replace(img_extension, 'png').replace('src/', '')
         out_path = os.path.join(out_dir, img_fn)
 
         plt.savefig(out_path)
