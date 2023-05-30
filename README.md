@@ -109,7 +109,7 @@ The `pandas` dataframe data are used to generate a plot using the `matplotlib` m
 | Linux | ✅ |
 | Docker | ✅ |
 | Windows | ✅ |
-| MacOS | ❔ |
+| MacOS | ✅ |
 
 ### Installation
 After ensuring that Python $\geq$ 3.10 is installed on your personal environment, install the required modules through the command:
@@ -151,6 +151,19 @@ winget install tesseract-ocr
 
 Then, ensure that `tesseract-ocr` root folder is included in your `PATH` and reboot.
 To add language support, download the `<LAN>.traineddata` pre-trained model from the following [link](https://github.com/tesseract-ocr/tessdata), where `LAN` are the first three characters of your language, and put it in `tesseract-ocr` root folder.
+
+#### MacOS
+Use brew package manager to install the `tesseract` package:
+
+```
+brew install tesseract
+```
+
+Then, add support to all the other languages installing the `tesseract-lang` package:
+
+```
+brew install tesseract-lang
+```
 
 ### Execution
 Run the `main.py` script in the root of the cloned folder to execute the program.

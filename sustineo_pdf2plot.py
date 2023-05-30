@@ -6,6 +6,7 @@ import math
 import numpy as np
 import pandas as pd
 import pytesseract as pt
+import languages
 
 DPI = 300                       # image DPI
 ZOOM = DPI/72                   # image zoom
@@ -22,7 +23,7 @@ class PDFToImage:
 
         self.__out_img_pages = []
 
-        self.__lang_dict = {'eng': 'materiality matrix', 'ita': 'matrice di materialità'}
+        self.__lang_dict = languages.LANGUAGE_DICT
         self.__lang = language
 
         self.__debug_mode = debug_mode
