@@ -1,11 +1,36 @@
 from numpy import sqrt
 
+# defines circular blobs
+# in the plot
+class Blob:
+    def __init__(self, center_x, center_y, radius):
+        self.__center_x = center_x
+        self.__center_y = center_y
+        self.__radius = radius
+
+    # computes the distance between
+    # the center and a point
+    def distance_from_point(self, point):
+        dist = sqrt((self.__center_x - point[0])**2 + (self.__center_y - point[1])**2)
+
+        return dist
+
+    @property
+    def position(self):
+        return (self.__center_x, self.__center_y)
+    
+    @property
+    def radius(self):
+        return self.__radius
+
+
 # defines rectangular boxes (containing labels)
 # in the plot
 class Box:
     def __init__(self, top_left, bottom_right):
         self.__top_left = tuple(top_left)
         self.__bottom_right = tuple(bottom_right)
+        self.__bottom_left = (top_left[0], bottom_right[1])
         self.__width = bottom_right[0] - top_left[0]
         self.__height = top_left[1] - bottom_right[1]
 
@@ -29,6 +54,10 @@ class Box:
     @property
     def bottom_right(self):
         return self.__bottom_right
+    
+    @property
+    def bottom_left(self):
+        return self.__bottom_left
 
     @property
     def width(self):
@@ -67,9 +96,14 @@ class TextBox(Box):
         else: 
             return False
 
-    def distance_from_textbox(self, box = Box):
-        dist = sqrt((box.top_left[0] - self.__top_right[0])**2 + (box.position[1] - self.__top_right[1])**2)
+    def distance_from_textbox_row(self, box = Box):
+        dist = sqrt((box.top_left[0] - self.__top_right[0])**2 + (box.top_left[1] - self.__top_right[1])**2)
 
+        return dist
+    
+    def distance_from_textbox_column(self, box = Box):
+        dist = sqrt((box.top_left[0] - self.bottom_left[0])**2 + (box.top_left[1] - self.bottom_left[1])**2)
+        
         return dist
 
 # defines the labelboxes containing

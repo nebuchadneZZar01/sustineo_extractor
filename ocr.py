@@ -2,7 +2,7 @@ import cv2
 import math
 import numpy as np
 import pandas as pd
-from plot_elements import TextBox, LabelBox, LegendBox
+from plot_elements import TextBox, LabelBox, LegendBox, Blob
 from pytesseract import pytesseract as pt
 
 class OCR:
@@ -57,14 +57,22 @@ class OCR:
 
 # OCR object class useful to
 # detect plot part of the image
-class PlotOCR(OCR):
+class PlotOCR_Box(OCR):
 	def __init__(self, image, lang = str, scale_factor = float, debug_mode = bool):
-		super(PlotOCR, self).__init__(image, lang, scale_factor, debug_mode)
+		super(PlotOCR_Box, self).__init__(image, lang, scale_factor, debug_mode)
 		self.__labelboxes = []				# will contain the bounding boxes of the entire labels
 		self.__textboxes = []					# will contain the bounding boxes of every single word
 
 		_, self.__work_image = cv2.threshold(self.image_gray, 185, 255, cv2.THRESH_BINARY)
 
+	@property
+	def textboxes(self):
+		return self.__textboxes
+	
+	@property
+	def labelboxes(self):
+		return self.__labelboxes
+	
 	# function that detects all the rectangles that contain the labels
 	def __extract_labels(self):
 		_, shapes = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
@@ -201,7 +209,7 @@ class PlotOCR(OCR):
 						print('no vertices')
 
 	# function that calls the tesseract OCR
-	def __process_text(self):
+	def process_text(self):
 		res = pt.image_to_data(self.__work_image, lang=self.language, output_type = pt.Output.DICT)
 		res = pd.DataFrame(res)
 		res = res.loc[res['conf'] != -1]
@@ -223,7 +231,7 @@ class PlotOCR(OCR):
 
 			if conf > 80:
 				if len(text.strip(' ')) != 0:
-					# region of interest of the letter
+					# the region of interest of the letter
 					letter_roi = self.__work_image[y:y+h, x:x+w]
 
 					w_cnt = 0
@@ -317,7 +325,7 @@ class PlotOCR(OCR):
 
 	def process_image(self):
 		self.__extract_labels()
-		self.__process_text()
+		self.process_text()
 		self.__compose_labelboxes()
 		self.__verify_labelboxes()
 
@@ -371,6 +379,111 @@ class PlotOCR(OCR):
 				colors.append(col)
 		
 		return colors
+	
+class PlotOCR_Blob(PlotOCR_Box):
+	def __init__(self, image, lang = str, scale_factor = float, debug_mode = bool):
+		super(PlotOCR_Blob, self).__init__(image, lang, scale_factor, debug_mode)
+		params = cv2.SimpleBlobDetector_Params()
+
+		# Change thresholds
+		params.minThreshold = 0
+		params.maxThreshold = 256
+
+		# Filter by Area.
+		params.filterByArea = True
+		params.minArea = 30
+		params.maxArea = 10000
+
+		# Filter by Color (black=0)
+		params.filterByColor = True
+		params.blobColor = 0
+
+		# Filter by Circularity
+		params.filterByCircularity = True
+		params.minCircularity = 0.5
+		params.maxCircularity = 1
+
+		# Filter by Convexity
+		params.filterByConvexity = True
+		params.minConvexity = 0.5
+		params.maxConvexity = 1
+
+		# Filter by InertiaRatio
+		params.filterByInertia = True
+		params.minInertiaRatio = 0
+		params.maxInertiaRatio = 1
+
+		# Distance Between Blobs
+		params.minDistBetweenBlobs = 0
+
+		self.__blob_detector = cv2.SimpleBlobDetector_create(params)
+
+	def __extract_shapes(self):
+		_, shapes = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
+
+		# we need to dilate the image in order to remove the lines
+		# otherwise, the boxes crossed by the line won't be detected
+		dilate_kernel = np.ones((3,3), np.uint8)
+		dilated_shapes = cv2.dilate(shapes, dilate_kernel)
+		
+		keypoints = self.__blob_detector.detect(dilated_shapes)
+		
+		blobs = []
+
+		for keypoint in keypoints:
+			cx = int(keypoint.pt[0])
+			cy = int(keypoint.pt[1])
+			s = keypoint.size
+			r = int(math.floor(s/2))
+
+			blob = Blob(cx, cy, r)
+			blobs.append(blobs)
+
+		if self.debug_mode:
+			blob_detected = cv2.drawKeypoints(self.image_original, keypoints, np.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+			tmp = cv2.resize(blob_detected, self.scale_size)
+
+			cv2.imshow("Keypoints", tmp)
+			cv2.waitKey(0)
+
+	def __compose_textboxes(self):
+		textboxes_list = []
+		actual_row = []
+
+		t_x = 50
+		t_y = 80
+
+		for i, tb in enumerate(self.textboxes):
+			actual_row.append(tb.text)
+
+			if i < len(self.textboxes)-1:
+				next_tb = self.textboxes[i+1]
+
+				dist_x = tb.distance_from_textbox_row(next_tb)
+				dist_y = tb.distance_from_textbox_column(next_tb)
+
+				if dist_x >= t_x or dist_y >= t_y:
+					textboxes_list.append(actual_row)
+					actual_row = []
+		
+		if actual_row:
+			textboxes_list.append(actual_row)
+
+		# for i in range(len(self.textboxes)):
+		# 	if i == len(self.textboxes)-1: break
+		# 	else:
+		# 		if self.textboxes[i].distance_from_textbox_row(self.textboxes[i+1]) < 30:
+		# 			l_i.append(self.textboxes[i+1])
+		# 		else:
+		# 			textboxes_list.append(l_i)
+		# 			del l_i[:]
+				
+		print(textboxes_list)
+
+	def process_image(self):
+		self.__extract_shapes()
+		self.process_text()
+		self.__compose_textboxes()
 
 # OCR object class useful to detect
 # the legend part of the image
@@ -455,7 +568,7 @@ class LegendOCR(OCR):
 		for i in range(len(self.__textboxes)):
 			if i == len(self.__textboxes)-1: break
 			else:
-				if self.__textboxes[i].distance_from_textbox(self.__textboxes[i+1]) < 15:
+				if self.__textboxes[i].distance_from_textbox_row(self.__textboxes[i+1]) < 15:
 					label += ' ' + self.__textboxes[i+1].text
 				else:
 					label += '\n' + self.__textboxes[i+1].text

@@ -128,13 +128,13 @@ class PDFToImage:
             if self.__debug_mode:
                 tmp_res = cv2.resize(page_copy, resize)
                 cv2.imshow('Finding materiality matrix', tmp_res)
-                cv2.waitKey(1500)
+                cv2.waitKey(0)
 
             image_gray = cv2.cvtColor(page_copy, cv2.COLOR_BGR2GRAY)
             _, work_image = cv2.threshold(image_gray, 180, 255, cv2.THRESH_BINARY)
 
             edges = cv2.Canny(work_image, 50, 150, apertureSize=3)
-            lines = cv2.HoughLines(edges, 1, math.pi/180, 550)
+            lines = cv2.HoughLines(edges, 1, math.pi/180, 700)
 
             rows = []
             columns = []

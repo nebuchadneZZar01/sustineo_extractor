@@ -16,7 +16,8 @@ def main(image_dir, language, scale_visualization, debug_mode):
 
     print('--- PLOT LOG ---')
 
-    ocr = PlotOCR(plot, language, scale_visualization, debug_mode)
+    ocr = PlotOCR_Blob(legend, language, scale_visualization, debug_mode)
+    # ocr = PlotOCR_Box(plot, language, scale_visualization, debug_mode)
     ocr.process_image()
 
     labelboxes = ocr.get_data()
