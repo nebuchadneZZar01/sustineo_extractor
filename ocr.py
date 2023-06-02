@@ -2,7 +2,7 @@ import cv2
 import math
 import numpy as np
 import pandas as pd
-from plot_elements import TextBox, LabelBox, LegendBox, Blob
+from plot_elements import TextBox, LabelBox, LabelBoxColorless, LegendBox, BlobBox
 from pytesseract import pytesseract as pt
 
 class OCR:
@@ -72,6 +72,10 @@ class PlotOCR_Box(OCR):
 	@property
 	def labelboxes(self):
 		return self.__labelboxes
+	
+	@labelboxes.setter
+	def labelboxes(self, new_labelboxes):
+		self.__labelboxes = new_labelboxes
 	
 	# function that detects all the rectangles that contain the labels
 	def __extract_labels(self):
@@ -313,8 +317,6 @@ class PlotOCR_Box(OCR):
 		print('Labels extracted: {N}\n'.format(N = len(self.__labelboxes)))
 
 		for lb in self.__labelboxes:
-			# lb.label.replace(lb.label, lb.label[:-1])
-			
 			print('Position: ({x},{y})\nText: {label}\nLabel length: {l}\nValue: {center}\n'.format(x = lb.position[0],\
 																								y = lb.position[1],\
 																								label = lb.label,
@@ -417,6 +419,7 @@ class PlotOCR_Blob(PlotOCR_Box):
 		params.minDistBetweenBlobs = 0
 
 		self.__blob_detector = cv2.SimpleBlobDetector_create(params)
+		self.__blobboxes = []
 
 	def __extract_shapes(self):
 		_, shapes = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
@@ -428,62 +431,101 @@ class PlotOCR_Blob(PlotOCR_Box):
 		
 		keypoints = self.__blob_detector.detect(dilated_shapes)
 		
-		blobs = []
-
 		for keypoint in keypoints:
 			cx = int(keypoint.pt[0])
 			cy = int(keypoint.pt[1])
 			s = keypoint.size
 			r = int(math.floor(s/2))
 
-			blob = Blob(cx, cy, r)
-			blobs.append(blobs)
+			blob = BlobBox(cx, cy, r)
+			self.__blobboxes.append(blob)
 
 		if self.debug_mode:
-			blob_detected = cv2.drawKeypoints(self.image_original, keypoints, np.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+			blob_detected = cv2.drawKeypoints(self.image_debug, keypoints, np.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 			tmp = cv2.resize(blob_detected, self.scale_size)
 
 			cv2.imshow("Keypoints", tmp)
 			cv2.waitKey(0)
 
 	def __compose_textboxes(self):
-		textboxes_list = []
-		actual_row = []
+		label_list = []
+		current_label = []
+		current_row = []
 
 		t_x = 50
-		t_y = 80
+		t_y = 50
 
 		for i, tb in enumerate(self.textboxes):
-			actual_row.append(tb.text)
+			current_row.append(tb)
 
-			if i < len(self.textboxes)-1:
+			if i < len(self.textboxes) - 1:
 				next_tb = self.textboxes[i+1]
 
 				dist_x = tb.distance_from_textbox_row(next_tb)
-				dist_y = tb.distance_from_textbox_column(next_tb)
 
-				if dist_x >= t_x or dist_y >= t_y:
-					textboxes_list.append(actual_row)
-					actual_row = []
-		
-		if actual_row:
-			textboxes_list.append(actual_row)
-
-		# for i in range(len(self.textboxes)):
-		# 	if i == len(self.textboxes)-1: break
-		# 	else:
-		# 		if self.textboxes[i].distance_from_textbox_row(self.textboxes[i+1]) < 30:
-		# 			l_i.append(self.textboxes[i+1])
-		# 		else:
-		# 			textboxes_list.append(l_i)
-		# 			del l_i[:]
+				if dist_x < t_x:
+					continue
 				
-		print(textboxes_list)
+				dist_y = current_row[0].distance_from_textbox_column(next_tb)
+
+				if dist_y < t_y:
+					current_label.append(current_row)
+					current_row = []
+					continue
+
+			current_label.append(current_row)
+			label_list.append(current_label)
+			current_label = []
+			current_row = []
+				
+		print(label_list)
+
+		for label in label_list:
+			lb = LabelBoxColorless(label[0][0].top_left, label[-1][-1].bottom_right)
+			self.labelboxes.append(lb)
+
+			if self.debug_mode:
+				cv2.rectangle(self.image_debug, label[0][0].top_left, label[-1][-1].bottom_right, (0,0,255), 4)
+
+				tmp = cv2.resize(self.image_debug, self.scale_size)
+				cv2.imshow('labels', tmp)
+				cv2.waitKey(0)
+
+		for i, lb in enumerate(self.labelboxes):
+				lb.add_text_in_label(label_list[i])
+
+	def __verify_labelboxes(self):
+		for lb in self.labelboxes.copy():
+			if len(lb.label.strip(' ')) <= 1:
+				self.labelboxes.remove(lb)
+
+	def __compose_blobboxes(self):
+		for bb in self.__blobboxes:
+			for lb in self.labelboxes:
+				if bb.distance_from_point(lb.center) < 300:
+					if not lb.taken:
+						bb.label = lb.label
+						lb.taken = True
+					else:
+						continue
+
+		print('Labels extracted: {N}\n'.format(N = len(self.__blobboxes)))
+
+		for bb in self.__blobboxes:
+			print('Position: ({x},{y})\nText: {label}\nLabel length: {l}\n'.format(x = bb.position[0],\
+																								y = bb.position[1],\
+																								label = bb.label,
+																								l = len(bb.label)))
+			if self.debug_mode:
+				cv2.circle(self.image_debug, bb.position, 5, (0, 0, 255), 5)
+
 
 	def process_image(self):
 		self.__extract_shapes()
 		self.process_text()
 		self.__compose_textboxes()
+		self.__verify_labelboxes()
+		self.__compose_blobboxes()
 
 # OCR object class useful to detect
 # the legend part of the image

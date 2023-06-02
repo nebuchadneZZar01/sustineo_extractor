@@ -156,6 +156,91 @@ class LabelBox(Box):
         else:
             pass
 
+class LabelBoxColorless(Box):
+    def __init__(self, top_left, bottom_right):
+        super(LabelBoxColorless, self).__init__(top_left, bottom_right)
+        self.__label = ''
+        self.__center = (int((top_left[0] + bottom_right[0])/2), int((top_left[1] + bottom_right[1])/2)) 
+        # defines if labelbox has been already choosen for selection
+        self.__taken = False
+
+    @property
+    def label(self):
+        return self.__label
+    
+    @property
+    def center(self):
+        return self.__center
+    
+    @property
+    def taken(self):
+        return self.__taken
+    
+    @taken.setter
+    def taken(self, boolean):
+        self.__taken = boolean
+    
+    def distance_from_point(self, point):
+        dist = sqrt((point[0] - self.center[0])**2 + (point[1] - self.center[1])**2)
+
+        return dist
+    
+    def add_text_in_label(self, list_label):
+        label = ''
+        for row in list_label:
+            for word in row:
+                label += ' ' + word.text
+        
+        label = label[1:].lower()
+        label = label.capitalize()
+
+        self.__label = label
+
+        print(self.__label)
+
+class BlobBox(Blob):
+    def __init__(self, center_x, center_y, radius):
+        super().__init__(center_x, center_y, radius)
+        self.__label = ''
+        self.__color_rgb = '1'                                  # background color of the box
+        self.__color_hsv = '1'                                  # used to detect the color range
+
+        # defines how good the alignment is
+        # compared to the diagonal
+        self.__alignment = 0
+
+    @property
+    def label(self):
+        return self.__label
+
+    @label.setter
+    def label(self, list_label):
+        self.__label = ''.join(list_label)
+        
+    @property
+    def color_rgb(self):
+        return self.__color_rgb
+    
+    @color_rgb.setter
+    def color_rgb(self, color_bgr):
+        self.__color_rgb = tuple(color_bgr[::-1])   
+
+    @property
+    def color_hsv(self):
+        return self.__color_hsv
+
+    @color_hsv.setter
+    def color_hsv(self, color_hsv):
+        self.__color_hsv = tuple(color_hsv)
+
+    @property
+    def alignment(self):
+        return self.__alignment
+
+    @alignment.setter
+    def alignment(self):
+        pass
+
 # defines the block containing a legend label
 # with its color, its label and starting from
 # the upper-left vertex
@@ -180,4 +265,3 @@ class LegendBox(Box):
     @color.setter
     def color(self, new_color):
         self.__color = new_color
-
