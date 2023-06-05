@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+import math
+from plot_elements import Blob
 
 # object class that crops the image, returning
 # the plot-part and the legend-part in order to
@@ -31,7 +33,7 @@ class Cropper:
     @property
     def image_size(self):
         return self.__image_size
-
+    
     # finds all the blocks composing the plot
     # using the Hough transform
     def find_delimiters(self):
@@ -166,3 +168,134 @@ class Cropper:
             cv2.waitKey(1500)
 
         return plot, legend
+    
+class BlobCropper:
+    def __init__(self, image, debug_mode = bool, scale_factor = float):
+        self.__image = image
+        self.__image_size = image.shape[0:2]
+        self.__image_size = self.image_size[::-1]      
+
+        self.__image_gray = cv2.cvtColor(self.__image, cv2.COLOR_BGR2GRAY)
+        _, self.__work_image = cv2.threshold(self.__image_gray, 180, 255, cv2.THRESH_BINARY)
+
+        self.__debug_mode = debug_mode
+        
+        if self.__debug_mode:
+            self.__scale_size = (int(self.image_size[0]/scale_factor), int(self.image_size[1]/scale_factor))
+            self.__image_debug = self.__image.copy()
+            
+            tmp_original = cv2.resize(self.__image, self.__scale_size)
+            tmp_work = cv2.resize(self.__work_image, self.__scale_size)
+
+            cv2.imshow('Finding image limits', tmp_original)
+            cv2.imshow('Finding image limits', tmp_work)
+            cv2.waitKey(1500)
+    
+    def __init_detector(self):
+        params = cv2.SimpleBlobDetector_Params()
+
+        # Change thresholds
+        params.minThreshold = 0
+        params.maxThreshold = 256
+
+        # Filter by Area.
+        params.filterByArea = True
+        params.minArea = 30
+        params.maxArea = 10000
+
+        # Filter by Color (black=0)
+        params.filterByColor = True
+        params.blobColor = 0
+
+        # Filter by Circularity
+        params.filterByCircularity = True
+        params.minCircularity = 0.5
+        params.maxCircularity = 1
+
+        # Filter by Convexity
+        params.filterByConvexity = True
+        params.minConvexity = 0.5
+        params.maxConvexity = 1
+
+        # Filter by InertiaRatio
+        params.filterByInertia = True
+        params.minInertiaRatio = 0
+        params.maxInertiaRatio = 1
+
+        # Distance Between Blobs
+        params.minDistBetweenBlobs = 0
+
+        self.__blob_detector = cv2.SimpleBlobDetector_create(params)
+        self.__blobboxes = []
+
+    def __extract_shapes(self):
+        _, shapes = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
+
+        # we need to dilate the image in order to remove the lines
+        # otherwise, the boxes crossed by the line won't be detected
+        dilate_kernel = np.ones((3,3), np.uint8)
+        dilated_shapes = cv2.dilate(shapes, dilate_kernel)
+        
+        keypoints = self.__blob_detector.detect(dilated_shapes)
+        
+        for keypoint in keypoints:
+            cx = int(keypoint.pt[0])
+            cy = int(keypoint.pt[1])
+            s = keypoint.size
+            r = int(math.floor(s/2))
+
+            blob = Blob(cx, cy, r)
+            self.__blobboxes.append(blob)
+
+        if self.debug_mode:
+            blob_detected = cv2.drawKeypoints(self.image_debug, keypoints, np.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+            tmp = cv2.resize(blob_detected, self.scale_size)
+
+            cv2.imshow("Finding image limits", tmp)
+            cv2.waitKey(0)
+
+    def __find_legend(self):
+        self.__init_detector()
+        self.__extract_shapes()
+
+        legend_blobs = []
+
+        for bb_i in self.__blobboxes:
+            for bb_j in self.__blobboxes:
+                if ((bb_i.position[1] == bb_j.position[1] or \
+                     bb_i.position[0] == bb_j.position[0]) and \
+                     bb_i != bb_j):
+                    legend_blobs.append(bb_i)
+
+        i = 0
+        while i < len(legend_blobs) - 1:
+            if legend_blobs[i] == legend_blobs[i+1]:
+                del legend_blobs[i+1] 
+
+        print(len(legend_blobs))
+        for lb in legend_blobs:
+            print(lb.position)
+
+    def separate_image(self):
+        self.__find_legend()
+        pass
+
+    @property
+    def image_size(self):
+        return self.__image_size
+    
+    @property
+    def image_debug(self):
+        return self.__image_debug
+    
+    @property
+    def image_gray(self):
+        return self.__image_gray
+    
+    @property
+    def debug_mode(self):
+        return self.__debug_mode
+    
+    @property
+    def scale_size(self):
+        return self.__scale_size

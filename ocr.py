@@ -446,6 +446,11 @@ class PlotOCR_Blob(PlotOCR_Box):
 
 			cv2.imshow("Keypoints", tmp)
 			cv2.waitKey(0)
+	
+	def __verify_textboxes(self):
+		for tb in self.textboxes.copy():
+			if tb.text == '@':
+				self.textboxes.remove(tb)
 
 	def __compose_textboxes(self):
 		label_list = []
@@ -465,10 +470,10 @@ class PlotOCR_Blob(PlotOCR_Box):
 
 				if dist_x < t_x:
 					continue
-				
-				dist_y = current_row[0].distance_from_textbox_column(next_tb)
 
-				if dist_y < t_y:
+				dists_y = [current_row[0].distance_from_textbox_column(next_of_next) for next_of_next in self.textboxes[i+1:]]
+				
+				if any(dist_y < t_y for dist_y in dists_y):
 					current_label.append(current_row)
 					current_row = []
 					continue
@@ -510,8 +515,11 @@ class PlotOCR_Blob(PlotOCR_Box):
 						continue
 
 		print('Labels extracted: {N}\n'.format(N = len(self.__blobboxes)))
+		image_hsv = cv2.cvtColor(self.image_original, cv2.COLOR_BGR2HSV)
 
 		for bb in self.__blobboxes:
+			bb.color_rgb = (self.image_original[bb.position[1], bb.position[0]])
+			bb.color_hsv = (image_hsv[bb.position[1], bb.position[0]])
 			print('Position: ({x},{y})\nText: {label}\nLabel length: {l}\n'.format(x = bb.position[0],\
 																								y = bb.position[1],\
 																								label = bb.label,
@@ -519,10 +527,24 @@ class PlotOCR_Blob(PlotOCR_Box):
 			if self.debug_mode:
 				cv2.circle(self.image_debug, bb.position, 5, (0, 0, 255), 5)
 
+	def get_colors_hsv(self):
+		colors = []
+
+		for bb in self.__blobboxes:
+			if bb.color_hsv not in colors:
+				col = []
+				for val in bb.color_hsv:
+					val = int(val)
+					col.append(val)
+				col = tuple(col) 
+				colors.append(col)
+		
+		return colors
 
 	def process_image(self):
 		self.__extract_shapes()
 		self.process_text()
+		self.__verify_textboxes()
 		self.__compose_textboxes()
 		self.__verify_labelboxes()
 		self.__compose_blobboxes()
