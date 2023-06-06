@@ -421,6 +421,8 @@ class PlotOCR_Blob(PlotOCR_Box):
 		self.__blob_detector = cv2.SimpleBlobDetector_create(params)
 		self.__blobboxes = []
 
+	# using the blob detector, it detects
+	# all the blobs in the plot
 	def __extract_shapes(self):
 		_, shapes = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
 
@@ -447,11 +449,16 @@ class PlotOCR_Blob(PlotOCR_Box):
 			cv2.imshow("Keypoints", tmp)
 			cv2.waitKey(0)
 	
+	# deletes all blobs detected as
+	# '@' character
 	def __verify_textboxes(self):
 		for tb in self.textboxes.copy():
 			if tb.text == '@':
 				self.textboxes.remove(tb)
 
+	# joins textboxes in order to have labels
+	# including all the words from the topper-left
+	# one to the bottom-right one
 	def __compose_textboxes(self):
 		label_list = []
 		current_label = []
@@ -499,11 +506,14 @@ class PlotOCR_Blob(PlotOCR_Box):
 		for i, lb in enumerate(self.labelboxes):
 				lb.add_text_in_label(label_list[i])
 
+	# deletes all empty labelboxes
 	def __verify_labelboxes(self):
 		for lb in self.labelboxes.copy():
 			if len(lb.label.strip(' ')) <= 1:
 				self.labelboxes.remove(lb)
 
+	# joins the blob with the nearest
+	# (euclidean distance) labelbox
 	def __compose_blobboxes(self):
 		for bb in self.__blobboxes:
 			for lb in self.labelboxes:
@@ -513,6 +523,13 @@ class PlotOCR_Blob(PlotOCR_Box):
 						lb.taken = True
 					else:
 						continue
+
+	# deletes all blobboxes having
+	# empty text field 
+	def __verify_blobboxes(self):
+		for bb in self.__blobboxes.copy():
+			if len(bb.label) <= 1:
+				self.__blobboxes.remove(bb)
 
 		print('Labels extracted: {N}\n'.format(N = len(self.__blobboxes)))
 		image_hsv = cv2.cvtColor(self.image_original, cv2.COLOR_BGR2HSV)
@@ -548,6 +565,10 @@ class PlotOCR_Blob(PlotOCR_Box):
 		self.__compose_textboxes()
 		self.__verify_labelboxes()
 		self.__compose_blobboxes()
+		self.__verify_blobboxes()
+
+	def get_data(self):
+		return self.__blobboxes
 
 # OCR object class useful to detect
 # the legend part of the image

@@ -113,6 +113,9 @@ class Exporter:
         print('\nAdded rankings by group, stakeholders and absolute relevances:')
         print(self.dataframe.head())
 
+    # calculates alignment measure
+    # using perpendicular distance
+    # from the line passing through origin
     def __alignment(self, point):
         # y = ax + by + c
         # being the diagonal line we have the following values
@@ -131,6 +134,7 @@ class Exporter:
         print('Added alignment measures:')
         print(self.dataframe.head())
 
+    # exports csv format dataset
     def __export_dataset(self):
         img_extension = self.__image_basename[-3:len(self.__image_basename)]
 
@@ -165,6 +169,8 @@ class Exporter:
 
         axis.plot([point_x, x_perpendicular], [point_y, y_perpendicular], linestyle='--', color='orange', label='Alignment distance')
 
+    # draws and exports new 
+    # open-format png plot
     def compose_export_plot(self):
         n_points = len(self.dataframe)
 
@@ -173,12 +179,10 @@ class Exporter:
         fig_height = max(8, n_points / 4)
 
         # taking colors for datasets
-        label_colors = {label: color for label, color in zip(self.dataframe['Label'].unique(), cm.tab20.colors)}
         kind_colors = {kind: color for kind, color in zip(self.dataframe['Kind'].unique(), cm.tab20.colors)}
 
         # mapping strings into numerical values
         label_mapping = {label: i for i, label in enumerate(self.dataframe['Label'].unique())}
-        kind_mapping = {kind: i for i, kind in enumerate(self.dataframe['Kind'].unique())}
 
         fig, ax = plt.subplots(figsize=(fig_width,fig_height))
         ax.grid(linestyle = '--')                               

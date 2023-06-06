@@ -181,6 +181,7 @@ class BlobCropper:
         self.__debug_mode = debug_mode
         
         if self.__debug_mode:
+            self.__scale_factor = scale_factor
             self.__scale_size = (int(self.image_size[0]/scale_factor), int(self.image_size[1]/scale_factor))
             self.__image_debug = self.__image.copy()
             
@@ -260,6 +261,9 @@ class BlobCropper:
 
         legend_blobs = []
 
+        # searching for blobboxes
+        # that share x coordinate or
+        # y coordinate
         for bb_i in self.__blobboxes:
             for bb_j in self.__blobboxes:
                 if ((bb_i.position[1] == bb_j.position[1] or \
@@ -267,18 +271,85 @@ class BlobCropper:
                      bb_i != bb_j):
                     legend_blobs.append(bb_i)
 
+        # cleaning list from duplicates
         i = 0
         while i < len(legend_blobs) - 1:
             if legend_blobs[i] == legend_blobs[i+1]:
-                del legend_blobs[i+1] 
+                del legend_blobs[i] 
+            else:
+                i += 1
 
-        print(len(legend_blobs))
+        # moving single-axis coordinates
+        # to temporary lists 
+        x_list = []
+        y_list = []
         for lb in legend_blobs:
-            print(lb.position)
+            x_list.append(lb.position[0])
+        
+        for lb in legend_blobs:
+            y_list.append(lb.position[1])
+        
+        # counting the most frequent element 
+        # on x-axis
+        x_count = 0
+        num_x = x_list[0]
+        for x in x_list:
+            curr_count = x_list.count(x)
+            if (curr_count > x_count):
+                x_count = curr_count
+                num_x = x
+
+        # counting the most frequent element
+        # on y-axis
+        y_count = 0
+        num_y = y_list[0]
+        for y in y_list:
+            curr_count = y_list.count(y)
+            if (curr_count > y_count):
+                y_count = curr_count
+                num_y = y
+
+        print('Most freq x: {x} \t - \t Frequency: {cnt}'.format(x=num_x, cnt=x_count))
+        print('Most freq y: {y} \t - \t Frequency: {cnt}\n'.format(y=num_y, cnt=y_count))
+
+        if x_count > y_count:
+            for lb in legend_blobs.copy():
+                if lb.position[0] != num_x:
+                    legend_blobs.remove(lb)
+        else:
+            for lb in legend_blobs.copy():
+                if lb.position[1] != num_y:
+                    legend_blobs.remove(lb)
+
+        return legend_blobs
 
     def separate_image(self):
-        self.__find_legend()
-        pass
+        legend_blobs = self.__find_legend()
+
+        v_offset = 40
+        h_offset = 40
+
+        top_left = (legend_blobs[-1].position[0] - h_offset, legend_blobs[-1].position[1] - v_offset)
+        bottom_right = (self.image_size[0], legend_blobs[0].position[1] + v_offset)
+
+        plot = self.__image.copy()
+        legend = self.__image[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
+        
+        cv2.rectangle(plot, top_left, bottom_right, (255, 255, 255), -1)
+        
+        if self.debug_mode:
+            tmp_plot_r_size = (int(plot.shape[1]/self.__scale_factor), int(plot.shape[0]/self.__scale_factor))
+            tmp_leg_r_size = (int(legend.shape[1]/self.__scale_factor), int(legend.shape[0]/self.__scale_factor))
+            
+            tmp_plot = cv2.resize(plot, tmp_plot_r_size)
+            tmp_leg = cv2.resize(legend, tmp_leg_r_size)
+
+            cv2.imshow('Plot OCR', tmp_plot)
+            cv2.imshow('Legend OCR', tmp_leg)
+            cv2.waitKey(0)
+
+        return plot, legend
+
 
     @property
     def image_size(self):

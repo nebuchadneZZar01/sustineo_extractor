@@ -17,7 +17,7 @@ def main(image_dir, language, plot_type, scale_visualization, debug_mode):
     print('--- PLOT LOG ---')
 
     if plot_type == 'blob':
-        ocr = PlotOCR_Blob(legend, language, scale_visualization, debug_mode)
+        ocr = PlotOCR_Blob(plot, language, scale_visualization, debug_mode)
     elif plot_type == 'box':
         ocr = PlotOCR_Box(plot, language, scale_visualization, debug_mode)
     ocr.process_image()

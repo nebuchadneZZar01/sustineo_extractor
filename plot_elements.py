@@ -20,6 +20,10 @@ class Blob:
         return (self.__center_x, self.__center_y)
     
     @property
+    def center(self):
+        return self.position
+    
+    @property
     def radius(self):
         return self.__radius
 
@@ -156,6 +160,9 @@ class LabelBox(Box):
         else:
             pass
 
+# defines labelboxes without color
+# used to identify labels that have
+# to be joined with the detected blobs
 class LabelBoxColorless(Box):
     def __init__(self, top_left, bottom_right):
         super(LabelBoxColorless, self).__init__(top_left, bottom_right)
@@ -198,6 +205,9 @@ class LabelBoxColorless(Box):
 
         print(self.__label)
 
+# blobs including the text and
+# and the color data
+# center equals the position
 class BlobBox(Blob):
     def __init__(self, center_x, center_y, radius):
         super().__init__(center_x, center_y, radius)
@@ -240,6 +250,10 @@ class BlobBox(Blob):
     @alignment.setter
     def alignment(self):
         pass
+
+##########
+# LEGEND #
+##########
 
 # defines the block containing a legend label
 # with its color, its label and starting from
