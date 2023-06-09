@@ -60,7 +60,7 @@ class OCR:
 class PlotOCR_Box(OCR):
 	def __init__(self, image, lang = str, scale_factor = float, debug_mode = bool):
 		super(PlotOCR_Box, self).__init__(image, lang, scale_factor, debug_mode)
-		self.__labelboxes = []				# will contain the bounding boxes of the entire labels
+		self.__labelboxes = []					# will contain the bounding boxes of the entire labels
 		self.__textboxes = []					# will contain the bounding boxes of every single word
 
 		_, self.__work_image = cv2.threshold(self.image_gray, 185, 255, cv2.THRESH_BINARY)
@@ -649,40 +649,43 @@ class LegendOCR(OCR):
 				self.colors_pos.append(((x, y), (c_rgb)))
 
 	def __process_legend(self):
-		label = self.__textboxes[0].text
-		for i in range(len(self.__textboxes)):
-			if i == len(self.__textboxes)-1: break
-			else:
-				if self.__textboxes[i].distance_from_textbox_row(self.__textboxes[i+1]) < 15:
-					label += ' ' + self.__textboxes[i+1].text
+		if len(self.__textboxes) > 0:
+			label = self.__textboxes[0].text
+			for i in range(len(self.__textboxes)):
+				if i == len(self.__textboxes)-1: break
 				else:
-					label += '\n' + self.__textboxes[i+1].text
+					if self.__textboxes[i].distance_from_textbox_row(self.__textboxes[i+1]) < 15:
+						label += ' ' + self.__textboxes[i+1].text
+					else:
+						label += '\n' + self.__textboxes[i+1].text
 
-		legends_labels = label.split('\n')
+			legends_labels = label.split('\n')
 
-		# take the first word of every level
-		# and compute the distance between it
-		# and the colored square: if it's lower
-		# than a certain threshold, the square is
-		# linked to the label via a LegendBox (to-do)
-		self.__legendboxes = []
-		for lb in legends_labels:
-			for tb in self.__textboxes:
-				if lb.split(' ')[0] == tb.text:
-					tmp_tb = tb		
-					for c in self.colors_pos:
-						c_pos = c[0]
-						c_col = c[1]
-						if tb.distance_from_point(c_pos) < 40:
-							if len(lb.split(' ')[0]) > 1:
-								legend_box = LegendBox(c_pos)
-								legend_box.color = c_col
-								legend_box.label = lb
-								self.__legendboxes.append(legend_box)
-		
-		print("Extracted labels from legend:")
-		for lb in self.__legendboxes:
-			print("label: {l}\ncolor: {c}\n".format(l = lb.label, c = lb.color))
+			# take the first word of every level
+			# and compute the distance between it
+			# and the colored square: if it's lower
+			# than a certain threshold, the square is
+			# linked to the label via a LegendBox (to-do)
+			self.__legendboxes = []
+			for lb in legends_labels:
+				for tb in self.__textboxes:
+					if lb.split(' ')[0] == tb.text:
+						tmp_tb = tb		
+						for c in self.colors_pos:
+							c_pos = c[0]
+							c_col = c[1]
+							if tb.distance_from_point(c_pos) < 40:
+								if len(lb.split(' ')[0]) > 1:
+									legend_box = LegendBox(c_pos)
+									legend_box.color = c_col
+									legend_box.label = lb
+									self.__legendboxes.append(legend_box)
+			
+			print("Extracted labels from legend:")
+			for lb in self.__legendboxes:
+				print("label: {l}\ncolor: {c}\n".format(l = lb.label, c = lb.color))
+		else:
+			self.__legendboxes = None
 
 	def process_image(self, colors_hsv):
 		self.__process_text()

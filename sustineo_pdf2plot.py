@@ -253,7 +253,7 @@ if __name__ == '__main__':
                                             \nGitHub: https://github.com/nebuchadneZZar01/',\
                                             formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    parser.add_argument('filename')
+    parser.add_argument('pathname')
 
     parser.add_argument('-l', '--language', type=str, default='ita',\
                         help='language of the plot to extract (default="ita")')
@@ -263,7 +263,12 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if os.path.isfile(args.filename):
-        main(args.filename, args.language, args.debug_mode)
+    if os.path.isfile(args.pathname):
+        main(args.pathname, args.language, args.debug_mode)
     else:
-        print('ERROR: File {fn} does not exist'.format(fn = args.filename))
+        if os.path.isdir(args.pathname):
+            for fn in os.listdir(args.pathname):
+                complete_fn = os.path.join(args.pathname, fn)
+                main(complete_fn, args.language, args.debug_mode)
+        else:
+            print('ERROR: File {fn} does not exist'.format(fn = args.pathname))

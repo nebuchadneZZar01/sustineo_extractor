@@ -289,64 +289,80 @@ class BlobCropper:
         for lb in legend_blobs:
             y_list.append(lb.position[1])
         
+
         # counting the most frequent element 
         # on x-axis
         x_count = 0
-        num_x = x_list[0]
-        for x in x_list:
-            curr_count = x_list.count(x)
-            if (curr_count > x_count):
-                x_count = curr_count
-                num_x = x
+        if len(x_list) > 0:
+            num_x = x_list[0]
+            for x in x_list:
+                curr_count = x_list.count(x)
+                if (curr_count > x_count):
+                    x_count = curr_count
+                    num_x = x
+            print('Most freq x: {x} \t - \t Frequency: {cnt}'.format(x=num_x, cnt=x_count))
 
         # counting the most frequent element
         # on y-axis
         y_count = 0
-        num_y = y_list[0]
-        for y in y_list:
-            curr_count = y_list.count(y)
-            if (curr_count > y_count):
-                y_count = curr_count
-                num_y = y
-
-        print('Most freq x: {x} \t - \t Frequency: {cnt}'.format(x=num_x, cnt=x_count))
-        print('Most freq y: {y} \t - \t Frequency: {cnt}\n'.format(y=num_y, cnt=y_count))
+        if len(x_list) > 0:
+            num_y = y_list[0]
+            for y in y_list:
+                curr_count = y_list.count(y)
+                if (curr_count > y_count):
+                    y_count = curr_count
+                    num_y = y
+            print('Most freq y: {y} \t - \t Frequency: {cnt}\n'.format(y=num_y, cnt=y_count))
 
         if x_count > y_count:
             for lb in legend_blobs.copy():
                 if lb.position[0] != num_x:
                     legend_blobs.remove(lb)
-        else:
+        elif y_count >= x_count:
             for lb in legend_blobs.copy():
                 if lb.position[1] != num_y:
                     legend_blobs.remove(lb)
+        elif x_count == 0 and y_count == 0:
+            pass
 
         return legend_blobs
 
     def separate_image(self):
         legend_blobs = self.__find_legend()
 
-        v_offset = 40
-        h_offset = 40
+        print(legend_blobs)
+        if len(legend_blobs) > 0:
+            v_offset = 40
+            h_offset = 40
 
-        top_left = (legend_blobs[-1].position[0] - h_offset, legend_blobs[-1].position[1] - v_offset)
-        bottom_right = (self.image_size[0], legend_blobs[0].position[1] + v_offset)
+            top_left = (legend_blobs[-1].position[0] - h_offset, legend_blobs[-1].position[1] - v_offset)
+            bottom_right = (self.image_size[0], legend_blobs[0].position[1] + v_offset)
 
-        plot = self.__image.copy()
-        legend = self.__image[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
-        
-        cv2.rectangle(plot, top_left, bottom_right, (255, 255, 255), -1)
-        
-        if self.debug_mode:
-            tmp_plot_r_size = (int(plot.shape[1]/self.__scale_factor), int(plot.shape[0]/self.__scale_factor))
-            tmp_leg_r_size = (int(legend.shape[1]/self.__scale_factor), int(legend.shape[0]/self.__scale_factor))
+            plot = self.__image.copy()
+            legend = self.__image[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
             
-            tmp_plot = cv2.resize(plot, tmp_plot_r_size)
-            tmp_leg = cv2.resize(legend, tmp_leg_r_size)
+            cv2.rectangle(plot, top_left, bottom_right, (255, 255, 255), -1)
+            
+            if self.debug_mode:
+                tmp_plot_r_size = (int(plot.shape[1]/self.__scale_factor), int(plot.shape[0]/self.__scale_factor))
+                tmp_leg_r_size = (int(legend.shape[1]/self.__scale_factor), int(legend.shape[0]/self.__scale_factor))
+                
+                tmp_plot = cv2.resize(plot, tmp_plot_r_size)
+                tmp_leg = cv2.resize(legend, tmp_leg_r_size)
 
-            cv2.imshow('Plot OCR', tmp_plot)
-            cv2.imshow('Legend OCR', tmp_leg)
-            cv2.waitKey(0)
+                cv2.imshow('Plot OCR', tmp_plot)
+                cv2.imshow('Legend OCR', tmp_leg)
+                cv2.waitKey(0)
+        else:
+            plot = self.__image
+            legend = None
+
+            if self.debug_mode:
+                tmp_plot_r_size = (int(plot.shape[1]/self.__scale_factor), int(plot.shape[0]/self.__scale_factor))
+                tmp_plot = cv2.resize(plot, tmp_plot_r_size)
+                
+                cv2.imshow('Plot OCR', tmp_plot)
+                cv2.waitKey(0)
 
         return plot, legend
 

@@ -26,12 +26,15 @@ def main(image_dir, language, plot_type, scale_visualization, debug_mode):
     plot_col = ocr.get_colors_hsv()
     if debug_mode: ocr.show_image()
 
-    print('--- LEGEND LOG ---')
+    if legend is not None:
+        print('--- LEGEND LOG ---')
 
-    leg = LegendOCR(legend, labelboxes, language, scale_visualization, debug_mode)
-    leg.process_image(plot_col)
-    legendboxes = leg.get_data()
-    if debug_mode: leg.show_image()
+        leg = LegendOCR(legend, labelboxes, language, scale_visualization, debug_mode)
+        leg.process_image(plot_col)
+        legendboxes = leg.get_data()
+        if debug_mode: leg.show_image()
+    else:
+        legendboxes = None
 
     ex = Exporter(image_dir, labelboxes, legendboxes)
     ex.compose_export_dataset()

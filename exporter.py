@@ -59,9 +59,10 @@ class Exporter:
 
         for lb in self.plot_data:
             kind = 'Unknown'
-            for legb in self.legend_data:
-                if legb.color == lb.color_rgb:
-                    kind = legb.label
+            if self.legend_data is not None:
+                for legb in self.legend_data:
+                    if legb.color == lb.color_rgb:
+                        kind = legb.label
             group_value = self.__renormalize_x_group(lb.center[0], 0, 300)
             stake_value = self.__renormalize_y_stake(lb.center[1], 0, 300)
             
@@ -70,7 +71,7 @@ class Exporter:
         self.__dataframe = pd.DataFrame(datas, columns=('Label', 'Kind', 'GroupRel', 'StakeRel'))
         
         # removing last blank char
-        self.__dataframe['Label'] = self.__dataframe.apply(lambda x: x['Label'][:-1], axis = 1)
+        self.__dataframe['Label'] = self.__dataframe.apply(lambda x: x['Label'][:-1] if x['Label'][-1] == ' ' else x['Label'], axis = 1)
         
         print('Showing the first rows of the dataset:')
         print(self.__dataframe.head())
