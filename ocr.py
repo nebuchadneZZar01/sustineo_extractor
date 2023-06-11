@@ -313,6 +313,19 @@ class PlotOCR_Box(OCR):
 		for lb in self.__labelboxes.copy():
 			if len(lb.label.strip(' ')) == 0 or len(lb.label) == 0:
 				self.__labelboxes.remove(lb)
+			else:
+				# removes all labelboxes containing
+				# only single-character words
+				# typically these are forms detected
+				# as characters
+				control = False
+				for w in lb.label.split(' '):
+					if len(w) == 1:
+						control = True
+					else:
+						control = False
+				if control:
+					self.labelboxes.remove(lb)
 
 		print('Labels extracted: {N}\n'.format(N = len(self.__labelboxes)))
 
@@ -424,7 +437,7 @@ class PlotOCR_Blob(PlotOCR_Box):
 	# using the blob detector, it detects
 	# all the blobs in the plot
 	def __extract_shapes(self):
-		_, shapes = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
+		_, shapes = cv2.threshold(self.image_gray, 175, 255, cv2.THRESH_BINARY)
 
 		# we need to dilate the image in order to remove the lines
 		# otherwise, the boxes crossed by the line won't be detected
@@ -439,21 +452,31 @@ class PlotOCR_Blob(PlotOCR_Box):
 			s = keypoint.size
 			r = int(math.floor(s/2))
 
-			blob = BlobBox(cx, cy, r)
-			self.__blobboxes.append(blob)
+			# ignoring all keypoints
+			# that have neglectable
+			# radius
+			if r >= 10:
+				blob = BlobBox(cx, cy, r)
+				self.__blobboxes.append(blob)
 
 		if self.debug_mode:
 			blob_detected = cv2.drawKeypoints(self.image_debug, keypoints, np.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-			tmp = cv2.resize(blob_detected, self.scale_size)
-
-			cv2.imshow("Keypoints", tmp)
-			cv2.waitKey(0)
+			
+			tmp_shapes = cv2.resize(shapes, self.scale_size)
+			tmp_dilated = cv2.resize(dilated_shapes, self.scale_size)
+			tmp_detected = cv2.resize(blob_detected, self.scale_size)
+			
+			cv2.imshow("Keypoints", tmp_shapes)
+			cv2.imshow("Keypoints", tmp_dilated)
+			cv2.imshow("Keypoints", tmp_detected)
+			cv2.waitKey(1500)
 	
 	# deletes all blobs detected as
-	# '@' character
+	# as strings not containing
+	# alphabetic characters
 	def __verify_textboxes(self):
 		for tb in self.textboxes.copy():
-			if tb.text == '@':
+			if not tb.text.isalpha():
 				self.textboxes.remove(tb)
 
 	# joins textboxes in order to have labels
@@ -511,16 +534,40 @@ class PlotOCR_Blob(PlotOCR_Box):
 		for lb in self.labelboxes.copy():
 			if len(lb.label.strip(' ')) <= 1:
 				self.labelboxes.remove(lb)
+			else:
+				# removes all labelboxes containing
+				# only single-character words
+				control = False
+				for w in lb.label.split(' '):
+					if len(w) == 1:
+						control = True
+					else:
+						control = False
+				if control == True:
+					self.labelboxes.remove(lb)
+					
 
 	# joins the blob with the nearest
 	# (euclidean distance) labelbox
 	def __compose_blobboxes(self):
 		for bb in self.__blobboxes:
+			dists = []
+			# calculating all distances between
+			# each blob and every labelboxes
 			for lb in self.labelboxes:
-				if bb.distance_from_point(lb.center) < 300:
+				dist = bb.distance_from_point(lb.center)
+				dists.append(dist)
+			
+			# taking the labelbox that has
+			# minimum distance from the 
+			# current blob
+			dists = sorted(dists)
+			for lb in self.labelboxes:
+				if bb.distance_from_point(lb.center) == dists[0]:
 					if not lb.taken:
 						bb.label = lb.label
 						lb.taken = True
+						dists.remove(dists[0])
 					else:
 						continue
 
@@ -648,6 +695,20 @@ class LegendOCR(OCR):
 				#print('{col} is in position ({_x}, {_y})\n'.format(col=c_rgb, _x=x, _y=y))
 				self.colors_pos.append(((x, y), (c_rgb)))
 
+		# verify if legend is disposed
+		# in row or in column and
+		# eventually sort it by y coord
+		column_leg = False	
+		for i, col in enumerate(self.colors_pos):
+			if i < len(self.colors_pos) - 1:
+				if col[0][0] == self.colors_pos[i+1][0][0]:
+					column_leg = True
+				else:
+					continue
+
+		if column_leg:
+			self.colors_pos = sorted(self.colors_pos, key=lambda col: col[0][1])
+
 	def __process_legend(self):
 		if len(self.__textboxes) > 0:
 			label = self.__textboxes[0].text
@@ -669,16 +730,26 @@ class LegendOCR(OCR):
 			self.__legendboxes = []
 			for lb in legends_labels:
 				for tb in self.__textboxes:
+					dists = []
 					if lb.split(' ')[0] == tb.text:
 						tmp_tb = tb		
 						for c in self.colors_pos:
 							c_pos = c[0]
+							dist = tb.distance_from_point(c_pos)
+							dists.append(dist)
+
+						dists = sorted(dists)
+
+						for c in self.colors_pos:
+							c_pos = c[0]
 							c_col = c[1]
-							if tb.distance_from_point(c_pos) < 40:
+
+							if tb.distance_from_point(c_pos) == dists[0]:
 								if len(lb.split(' ')[0]) > 1:
 									legend_box = LegendBox(c_pos)
 									legend_box.color = c_col
 									legend_box.label = lb
+									dists.remove(dists[0])
 									self.__legendboxes.append(legend_box)
 			
 			print("Extracted labels from legend:")

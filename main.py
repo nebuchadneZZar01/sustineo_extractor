@@ -35,11 +35,11 @@ def main(image_dir, language, plot_type, scale_visualization, debug_mode):
         if debug_mode: leg.show_image()
     else:
         legendboxes = None
+        print('There is no legend in this plot, skipping legend elaboration...\n')
 
     ex = Exporter(image_dir, labelboxes, legendboxes)
     ex.compose_export_dataset()
     ex.compose_export_plot()
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='sustineo_extractor',

@@ -245,8 +245,13 @@ class BlobCropper:
             s = keypoint.size
             r = int(math.floor(s/2))
 
-            blob = Blob(cx, cy, r)
-            self.__blobboxes.append(blob)
+            # ignoring all keypoints that have
+            # neglectable size: probably they
+            # are detected on small detail forms
+            # ord characters
+            if r >= 11:
+                blob = Blob(cx, cy, r)
+                self.__blobboxes.append(blob)
 
         if self.debug_mode:
             blob_detected = cv2.drawKeypoints(self.image_debug, keypoints, np.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
@@ -293,7 +298,7 @@ class BlobCropper:
         # counting the most frequent element 
         # on x-axis
         x_count = 0
-        if len(x_list) > 0:
+        if len(x_list) > 2:
             num_x = x_list[0]
             for x in x_list:
                 curr_count = x_list.count(x)
@@ -305,7 +310,7 @@ class BlobCropper:
         # counting the most frequent element
         # on y-axis
         y_count = 0
-        if len(x_list) > 0:
+        if len(x_list) > 2:
             num_y = y_list[0]
             for y in y_list:
                 curr_count = y_list.count(y)
@@ -314,45 +319,48 @@ class BlobCropper:
                     num_y = y
             print('Most freq y: {y} \t - \t Frequency: {cnt}\n'.format(y=num_y, cnt=y_count))
 
-        if x_count > y_count:
-            for lb in legend_blobs.copy():
-                if lb.position[0] != num_x:
-                    legend_blobs.remove(lb)
-        elif y_count >= x_count:
-            for lb in legend_blobs.copy():
-                if lb.position[1] != num_y:
-                    legend_blobs.remove(lb)
-        elif x_count == 0 and y_count == 0:
-            pass
+        if x_count > 2 or y_count > 2:
+            if x_count > y_count:
+                for lb in legend_blobs.copy():
+                    if lb.position[0] != num_x:
+                        legend_blobs.remove(lb)
+            elif y_count >= x_count:
+                for lb in legend_blobs.copy():
+                    if lb.position[1] != num_y:
+                        legend_blobs.remove(lb)
+            elif x_count == 0 and y_count == 0:
+                pass
 
-        return legend_blobs
+            return legend_blobs
+        else:
+            return None
 
     def separate_image(self):
         legend_blobs = self.__find_legend()
 
-        print(legend_blobs)
-        if len(legend_blobs) > 0:
-            v_offset = 40
-            h_offset = 40
+        if legend_blobs is not None:
+            if len(legend_blobs) > 0:
+                v_offset = 40
+                h_offset = 40
 
-            top_left = (legend_blobs[-1].position[0] - h_offset, legend_blobs[-1].position[1] - v_offset)
-            bottom_right = (self.image_size[0], legend_blobs[0].position[1] + v_offset)
+                top_left = (legend_blobs[-1].position[0] - h_offset, legend_blobs[-1].position[1] - v_offset)
+                bottom_right = (self.image_size[0], legend_blobs[0].position[1] + v_offset)
 
-            plot = self.__image.copy()
-            legend = self.__image[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
-            
-            cv2.rectangle(plot, top_left, bottom_right, (255, 255, 255), -1)
-            
-            if self.debug_mode:
-                tmp_plot_r_size = (int(plot.shape[1]/self.__scale_factor), int(plot.shape[0]/self.__scale_factor))
-                tmp_leg_r_size = (int(legend.shape[1]/self.__scale_factor), int(legend.shape[0]/self.__scale_factor))
+                plot = self.__image.copy()
+                legend = self.__image[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
                 
-                tmp_plot = cv2.resize(plot, tmp_plot_r_size)
-                tmp_leg = cv2.resize(legend, tmp_leg_r_size)
+                cv2.rectangle(plot, top_left, bottom_right, (255, 255, 255), -1)
+                
+                if self.debug_mode:
+                    tmp_plot_r_size = (int(plot.shape[1]/self.__scale_factor), int(plot.shape[0]/self.__scale_factor))
+                    tmp_leg_r_size = (int(legend.shape[1]/self.__scale_factor), int(legend.shape[0]/self.__scale_factor))
+                    
+                    tmp_plot = cv2.resize(plot, tmp_plot_r_size)
+                    tmp_leg = cv2.resize(legend, tmp_leg_r_size)
 
-                cv2.imshow('Plot OCR', tmp_plot)
-                cv2.imshow('Legend OCR', tmp_leg)
-                cv2.waitKey(0)
+                    cv2.imshow('Plot OCR', tmp_plot)
+                    cv2.imshow('Legend OCR', tmp_leg)
+                    cv2.waitKey(0)
         else:
             plot = self.__image
             legend = None
