@@ -240,10 +240,10 @@ class BlobCropper:
         keypoints = self.__blob_detector.detect(dilated_shapes)
         
         for keypoint in keypoints:
-            cx = int(keypoint.pt[0])
-            cy = int(keypoint.pt[1])
-            s = keypoint.size
-            r = int(math.floor(s/2))
+            cx = int(keypoint.pt[0])                    # center x
+            cy = int(keypoint.pt[1])                    # center y
+            s = keypoint.size                           # size
+            r = int(math.floor(s/2))                    # radius
 
             # ignoring all keypoints that have
             # neglectable size: probably they
@@ -258,7 +258,7 @@ class BlobCropper:
             tmp = cv2.resize(blob_detected, self.scale_size)
 
             cv2.imshow("Finding image limits", tmp)
-            cv2.waitKey(0)
+            cv2.waitKey(1500)
 
     def __find_legend(self):
         self.__init_detector()
@@ -293,7 +293,6 @@ class BlobCropper:
         
         for lb in legend_blobs:
             y_list.append(lb.position[1])
-        
 
         # counting the most frequent element 
         # on x-axis
@@ -324,27 +323,35 @@ class BlobCropper:
                 for lb in legend_blobs.copy():
                     if lb.position[0] != num_x:
                         legend_blobs.remove(lb)
+                        x_axis = False
             elif y_count >= x_count:
                 for lb in legend_blobs.copy():
                     if lb.position[1] != num_y:
                         legend_blobs.remove(lb)
+                        x_axis = True
             elif x_count == 0 and y_count == 0:
                 pass
 
-            return legend_blobs
+            return legend_blobs, x_axis
         else:
-            return None
+            return None, None
 
     def separate_image(self):
-        legend_blobs = self.__find_legend()
+        legend_blobs, x_axis = self.__find_legend()
 
         if legend_blobs is not None:
             if len(legend_blobs) > 0:
                 v_offset = 40
                 h_offset = 40
 
-                top_left = (legend_blobs[-1].position[0] - h_offset, legend_blobs[-1].position[1] - v_offset)
-                bottom_right = (self.image_size[0], legend_blobs[0].position[1] + v_offset)
+                if x_axis:
+                    legend_blobs = sorted(legend_blobs, key=lambda x: x.position[0])
+                    top_left = (legend_blobs[0].position[0] - h_offset, legend_blobs[-1].position[1] - v_offset)
+                    bottom_right = (self.image_size[0], legend_blobs[-1].position[1] + v_offset)
+                else: 
+                    top_left = (legend_blobs[-1].position[0] - h_offset, legend_blobs[-1].position[1] - v_offset)
+                    bottom_right = (self.image_size[0], legend_blobs[0].position[1] + v_offset)
+ 
 
                 plot = self.__image.copy()
                 legend = self.__image[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
@@ -370,7 +377,7 @@ class BlobCropper:
                 tmp_plot = cv2.resize(plot, tmp_plot_r_size)
                 
                 cv2.imshow('Plot OCR', tmp_plot)
-                cv2.waitKey(0)
+                cv2.waitKey(1500)
 
         return plot, legend
 

@@ -466,9 +466,10 @@ class PlotOCR_Blob(PlotOCR_Box):
 			tmp_dilated = cv2.resize(dilated_shapes, self.scale_size)
 			tmp_detected = cv2.resize(blob_detected, self.scale_size)
 			
-			cv2.imshow("Keypoints", tmp_shapes)
-			cv2.imshow("Keypoints", tmp_dilated)
-			cv2.imshow("Keypoints", tmp_detected)
+			cv2.destroyAllWindows()
+			cv2.imshow("Plot OCR", tmp_shapes)
+			cv2.imshow("Plot OCR", tmp_dilated)
+			cv2.imshow("Plot OCR", tmp_detected)
 			cv2.waitKey(1500)
 	
 	# deletes all blobs detected as
@@ -487,8 +488,8 @@ class PlotOCR_Blob(PlotOCR_Box):
 		current_label = []
 		current_row = []
 
-		t_x = 50
-		t_y = 50
+		t_x = 25
+		t_y = 30
 
 		for i, tb in enumerate(self.textboxes):
 			current_row.append(tb)
@@ -502,7 +503,7 @@ class PlotOCR_Blob(PlotOCR_Box):
 					continue
 
 				dists_y = [current_row[0].distance_from_textbox_column(next_of_next) for next_of_next in self.textboxes[i+1:]]
-				
+
 				if any(dist_y < t_y for dist_y in dists_y):
 					current_label.append(current_row)
 					current_row = []
@@ -513,8 +514,6 @@ class PlotOCR_Blob(PlotOCR_Box):
 			current_label = []
 			current_row = []
 				
-		print(label_list)
-
 		for label in label_list:
 			lb = LabelBoxColorless(label[0][0].top_left, label[-1][-1].bottom_right)
 			self.labelboxes.append(lb)
@@ -523,8 +522,8 @@ class PlotOCR_Blob(PlotOCR_Box):
 				cv2.rectangle(self.image_debug, label[0][0].top_left, label[-1][-1].bottom_right, (0,0,255), 4)
 
 				tmp = cv2.resize(self.image_debug, self.scale_size)
-				cv2.imshow('labels', tmp)
-				cv2.waitKey(0)
+				cv2.imshow('Plot OCR', tmp)
+				cv2.waitKey(100)
 
 		for i, lb in enumerate(self.labelboxes):
 				lb.add_text_in_label(label_list[i])
@@ -565,9 +564,10 @@ class PlotOCR_Blob(PlotOCR_Box):
 			for lb in self.labelboxes:
 				if bb.distance_from_point(lb.center) == dists[0]:
 					if not lb.taken:
-						bb.label = lb.label
-						lb.taken = True
-						dists.remove(dists[0])
+						if len(bb.label) == 0:
+							bb.label = lb.label
+							lb.taken = True
+							dists.remove(dists[0])
 					else:
 						continue
 
@@ -658,11 +658,12 @@ class LegendOCR(OCR):
 				text = "".join([c if ord(c) < 128 else "" for c in text]).strip()
 
 				if len(text) > 0:
-					tb = TextBox((x, y), w, h, text)
-					if self.debug_mode:
-						cv2.rectangle(self.image_debug, (x, y), (x + w, y + h), (255, 0, 0), 2)
+					if text.isalpha():
+						tb = TextBox((x, y), w, h, text)
+						if self.debug_mode:
+							cv2.rectangle(self.image_debug, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
-					self.__textboxes.append(tb)
+						self.__textboxes.append(tb)
 
 	# using hsv color-space, it calls inRange()
 	# function to detect color position

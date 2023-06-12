@@ -203,8 +203,6 @@ class LabelBoxColorless(Box):
 
         self.__label = label
 
-        print(self.__label)
-
 # blobs including the text and
 # and the color data
 # center equals the position
