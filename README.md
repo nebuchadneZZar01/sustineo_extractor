@@ -15,9 +15,11 @@ A `python` software for materiality matrices extraction.
 
 
 ## Description
-This `python` software can be used to extract data from block-form materiality matrices, like the one that follows.
+This `python` software can be used to extract data from block-form materiality matrices, in box-type form and in blob-type form, like the ones that follow.
 
-![image](src/amadori2.png)
+![image](src/img/box/amadori2_35.png)
+
+![image](src/img/blob/acsm_agam_29.png)
 
 You can obtain an output like the following:
 
@@ -32,35 +34,62 @@ The software follows 5 different passes:
 ### 1. Plot/legend subdivision
 At first, in order to have higher scalability, the input image is **divided** into two section: plot and lagend. 
 
-More specifically, a "bounding box" approach has been choosen: using the **Hough transform** (after binarizing the input image), the software is able to detect all the lines on the image. Being a $(3 \times 3)$-blocks plot, is very easy to detect these lines.\
+This process differs following the type of the plot image in input.
+
+#### Box-type
+In this case, a "bounding box" approach has been choosen: using the **Hough transform** (after binarizing the input image), the software is able to detect all the lines on the image. Being a $(3 \times 3)$-blocks plot, is very easy to detect these lines.\
 Next, the intersections are computed and between them, the software detects the minimum-area box of the plot, the one on the bottom-left. Using this rectangle, is then used a 1:3 aspect ratio to find the entire area of the plot: in particular, the subdivision is done using the three limiting vertices of the rectangle including the plot (top-left, bottom-left, top-right). 
 
 ![image](plot_little_big.png)
 
 Finally, the cropped plot and legend sections of the image are passed as input to the data-extraction module of the software.
 
+#### Blob-type
+In this case, a different approach - based on a **blob detector** - has been choosen. 
+Using the detector, the software finds all the blobs (circular forms) that have the same coordinates, disposed both in horizontal and in vertical.\
+To distinguish the legend's blob from the actual plot's blob (representing the values in $(x,y)$ coordinates), the software counts the number of blobs that share the same coordinare; statistically, if more than two, then we are in presence of a legend.
+
+Next, the software detects the first and the last blob composing the legend, and using them as delimiters, it "crops" the legend away from the input image.
+
 ### 2. Plot interpretation
 #### 2.1. Shape detection
-At first, the data-extraction `PlotOCR` class (that inherits from `OCR` class) object does a shape detection operation onto the plot file data.\
+##### Box-type
+At first, the data-extraction `PlotOCR_Box` class (that inherits from `OCR` class) object does a shape detection operation onto the plot file data.\
 In particular, after **binarizing** the input plot (again, but using a different threshold in order to obtain the shapes of the rectangles in the image) and using a **$(2 \times 2)$-kernel dilatation** (in order to remove the thin lines), all the corners are extracted.
 
 There are two different cases:
 - **simple case**, rectangle on the plot: the limiting vertices (top-left and bottom-right ones) of the rectangle are detected and then used to define `LabelBox`-class objects for every detected rectangle;
 - **complex case**, irregular form on the plot: this is the case in which the rectangles are joined between them; here, the software analyzes and then subdivides the 8-edges irregular shape, in order to obtain two rectangles and proceed like in the previous case.
 
+##### Blob-type
+At first, the data-extraction `PlotOCR_Blob` class (that inherits from `OCR` class) object does a shape detection operation onto the plot file data.\
+Again, after **binarizing** the input plot and using a **$(2 \times 2)$-kernel dilatation**, all the blobs are detected using a **blob detector**; however, in this passage a different radius threshold is set in order to discard all keypoints detected from the letters of the labels. 
+
 #### 2.2. Text detection
 Another **threshold** operation is done, but this time in manner to leave only the text and ignore the shape. Also during this pass we have two different cases:
-1. **black text** on **colored rectangles**: the binarized image has exclusively black text, without any background (as it is discarted during the thresholding);
-2. **white text** on **colored rectangles**: the binarized image has white text on black boxes.
+1. **black text** on **colored images**: the binarized image has exclusively black text, without any background (as it is discarted during the thresholding);
+2. **white text** on **colored images**: the binarized image has white text on black boxes.
 
 As the OCR module works better with black-texted images, in the 2nd case the image is converted to negative in order to proceed like in the 1st one. 
 
 Next, calling the `pyTesseract` module (python implementation for Google's *Tesseract OCR*), we are able to obtain a **dictionary** containing different informations about the words on the box, their respective pixel-coordinates, and bounding boxes informations.\
-All these informations are used to instantiate `TextBox` class objects for every detected word; then, bounding box and respective coordinates are used to detect which word is contained in which colored box, and thus in which `LabelBox`, forming then the label.
+All these informations are used to instantiate `TextBox` class objects for every detected word.
 
-Meanwhile, for every rectangle in the plot is saved the color data (both in RGB and HSV format) and stored in the `color_rgb` and `color_hsv` attributes of every single `TextBox`-class objects. This information will be used in the next part.
+##### Box-type
+The bounding boxes and respective coordinates are used to detect which word is contained in which colored box, and thus in which `LabelBox`, forming then the label.
 
-All the `LabelBox`es data are given as output.
+##### Blob-type
+Every `TextBox` is put into a `LabelBoxColorless` according to this heuristic:
+
+- if the current word has a distance $d_x < t_x$ from next one, then they are on the same row;
+- else, the next word is in the following row if the distance between the first word of the first row has a distance $d_y < t_y$ from the next one.
+
+Finally, we join each `BlobBox` to the nearest `LabelBoxColorless` (using the euclidean distance between the center of the blob and the center of the `LabelBoxColorless`).
+
+#### 2.3 Legend link
+Meanwhile, for every rectangle or blob in the plot, the color data is saved(both in RGB and HSV format) and then stored in the `color_rgb` and `color_hsv` attributes of every single `TextBox`-class objects. This information will be used in the next part.
+
+All the `LabelBox`es or `BlobBox`es data are then given as output.
 
 ### 3. Legend interpretation
 The extraction now involves the legend section previously cropped from the source image. The data is passed as input to the `LegendOCR` class (inherits from `OCR` class) object.
@@ -81,7 +110,9 @@ Next, we can process the legend; kwowing that the first `TextBox` of every singl
 All the `LegendBox`es data are then given as output.
 
 ### 4. Final export
-During the final export, the `LabelBox`es and the `LegendBox`es data are passed as input to the `Exporter` class object.
+During the final export, the `LabelBox`es and the `LegendBox`es data are passed as input to the `Exporter` class object.\
+If there is no Legend, the legend-data is set as None and then discarded.
+
 The following operations are then done.
 
 #### 4.1. Normalization
@@ -99,9 +130,11 @@ The `pandas` dataframe data are used to generate a plot using the `matplotlib` m
 ### Dependencies
 - Python 3.10
 - `tesseract-ocr` package
+- `matplotlib` python module
+- `pandas` python module
 - `opencv-python` python module
 - `pytesseract` python module
-- `matplotlib` python module
+- `pymupdf` python module
 
 ### Tested Environments
 | Environment | Works |
@@ -172,27 +205,29 @@ Run the `main.py` script in the root of the cloned folder to execute the program
 ```
 python main.py -h
 
-usage: main.py [-h] [-l LANGUAGE] [-d DEBUG_MODE] [-s SIZE_FACTOR] filename
+usage: sustineo_extractor [-h] [-l LANGUAGE] [-t TYPE] [-d] [-s SIZE_FACTOR] pathname
 
 This program extracts data from materiality matrices and reinterprets them in a more undestandable form.                                            
 Author: nebuchadneZZar01 (Michele Ferro)                                            
 GitHub: https://github.com/nebuchadneZZar01/
 
 positional arguments:
-  filename
+  pathname
 
 options:
   -h, --help            show this help message and exit
   -l LANGUAGE, --language LANGUAGE
                         language of the plot to extract (default="ita")
-  -d DEBUG_MODE, --debug-mode DEBUG_MODE
-                        activate the visualization of the various passes (default=false)
+  -t TYPE, --type TYPE  type of plot from where extract the informations (default="box")
+  -d, --debug-mode      activate the visualization of the various passes
   -s SIZE_FACTOR, --size-factor SIZE_FACTOR
                         if used in debug mode, the image sizes will be divided by the choosen scale factor for a better visualization on lower resolution screens (default=1.5)
 ```
 
 #### Input
 The input files can be stored in the `/src` folder.
+
+The `pathname` could be both the one of a file or of a directory containing more than one file; if the latter is used, then the algorithm is executed for every image in the directory.
 
 ```
 python main.py src/input.png
@@ -273,6 +308,8 @@ To invoke the script, use the command:
 ```
 python sustineo_pdf2plot.py src/input.pdf
 ```
+
+The `pathname` could be both the one of a file or of a directory containing more than one file; if the latter is used, then the algorithm is executed for every document in the directory.
 
 ## Author
 - [@nebuchadneZZar01](https://github.com/nebuchadneZZar01) (Michele Ferro)
