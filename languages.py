@@ -122,9 +122,11 @@ LANGUAGE_DICT = {
     'yor': ''
 }
 
-cnt = 0
-for lan in LANGUAGE_DICT.values():
-    if lan != '':
-        cnt += 1
+# counting languages
+if __name__ == '__main__':
+    cnt = 0
+    for lan in LANGUAGE_DICT.values():
+        if lan != '':
+            cnt += 1
 
-print(cnt)
+    print(cnt)

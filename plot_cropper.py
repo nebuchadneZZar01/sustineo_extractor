@@ -319,11 +319,11 @@ class BlobCropper:
             print('Most freq y: {y} \t - \t Frequency: {cnt}\n'.format(y=num_y, cnt=y_count))
 
         if x_count > 2 or y_count > 2:
+            x_axis = False
             if x_count > y_count:
                 for lb in legend_blobs.copy():
                     if lb.position[0] != num_x:
                         legend_blobs.remove(lb)
-                        x_axis = False
             elif y_count >= x_count:
                 for lb in legend_blobs.copy():
                     if lb.position[1] != num_y:
@@ -367,7 +367,7 @@ class BlobCropper:
 
                     cv2.imshow('Plot OCR', tmp_plot)
                     cv2.imshow('Legend OCR', tmp_leg)
-                    cv2.waitKey(0)
+                    cv2.waitKey(1500)
         else:
             plot = self.__image
             legend = None

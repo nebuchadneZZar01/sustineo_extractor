@@ -128,7 +128,7 @@ class PDFToImage:
             if self.__debug_mode:
                 tmp_res = cv2.resize(page_copy, resize)
                 cv2.imshow('Finding materiality matrix', tmp_res)
-                cv2.waitKey(0)
+                cv2.waitKey(1500)
 
             image_gray = cv2.cvtColor(page_copy, cv2.COLOR_BGR2GRAY)
             _, work_image = cv2.threshold(image_gray, 180, 255, cv2.THRESH_BINARY)
@@ -190,11 +190,12 @@ class PDFToImage:
                         cv2.imshow('Finding materiality matrix', tmp_res)
                         cv2.waitKey(1500)
 
-                    v_offset = 350                              # vertical offset
+                    upper_offset = 200                              # vertical offset
+                    lower_offset = 350
 
                     # final cropped area delimiters
-                    top_left = (0, i_top_left[1] - v_offset) if (i_top_left[1] - v_offset > 0) else (0, 0)
-                    bottom_right = (width, i_bottom_right[1] + v_offset) if (i_bottom_right[1] + v_offset < height) else (width, height)
+                    top_left = (0, i_top_left[1] - upper_offset) if (i_top_left[1] - upper_offset > 0) else (0, 0)
+                    bottom_right = (width, i_bottom_right[1] + lower_offset) if (i_bottom_right[1] + lower_offset < height) else (width, height)
 
                     mat_matrix = page[0][top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]                      # materiality matrix region
                     
@@ -203,7 +204,7 @@ class PDFToImage:
                     tmp = cv2.resize(mat_matrix, (int(mat_matrix.shape[1]/3), int(mat_matrix.shape[0]/3)))
                     cv2.imshow('Finding materiality matrix', tmp)
 
-                    cv2.waitKey(0)
+                    cv2.waitKey(1500)
                     cv2.destroyAllWindows()
 
                     # asking user if the cropped region is ok
@@ -267,8 +268,10 @@ if __name__ == '__main__':
         main(args.pathname, args.language, args.debug_mode)
     else:
         if os.path.isdir(args.pathname):
-            for fn in os.listdir(args.pathname):
+            n_files = len(os.listdir(args.pathname))
+            for i, fn in enumerate(os.listdir(args.pathname)):
                 complete_fn = os.path.join(args.pathname, fn)
+                print('Converting file {n} of {n_files}...\n'.format(n = i+1, n_files = n_files))
                 main(complete_fn, args.language, args.debug_mode)
         else:
             print('ERROR: File {fn} does not exist'.format(fn = args.pathname))

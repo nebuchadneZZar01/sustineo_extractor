@@ -132,7 +132,7 @@ class Exporter:
         df = self.dataframe
         df['Alignment'] = df[['GroupRel', 'StakeRel']].apply(tuple, axis=1).apply(self.__alignment)
 
-        print('Added alignment measures:')
+        print('\nAdded alignment measures:')
         print(self.dataframe.head())
 
     # exports csv format dataset
@@ -234,4 +234,4 @@ class Exporter:
         plt.savefig(out_path)
         plt.show()
 
-        print('\nConverted image was exported to {fn}'.format(fn = out_path))
+        print('Converted image was exported to {fn}\n'.format(fn = out_path))

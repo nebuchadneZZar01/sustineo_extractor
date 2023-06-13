@@ -14,8 +14,7 @@ def main(image_dir, language, plot_type, scale_visualization, debug_mode):
         m = BlobCropper(image, debug_mode, scale_visualization)
     plot, legend = m.separate_image()
 
-    print('--- PLOT LOG ---')
-
+    print('--- START PLOT LOG ---')
     if plot_type == 'blob':
         ocr = PlotOCR_Blob(plot, language, scale_visualization, debug_mode)
     elif plot_type == 'box':
@@ -25,9 +24,10 @@ def main(image_dir, language, plot_type, scale_visualization, debug_mode):
     labelboxes = ocr.get_data()
     plot_col = ocr.get_colors_hsv()
     if debug_mode: ocr.show_image()
-
+    print('--- STOP PLOT LOG ---')
+    
+    print('\n--- START LEGEND LOG ---')
     if legend is not None:
-        print('--- LEGEND LOG ---')
 
         leg = LegendOCR(legend, labelboxes, language, scale_visualization, debug_mode)
         leg.process_image(plot_col)
@@ -35,7 +35,8 @@ def main(image_dir, language, plot_type, scale_visualization, debug_mode):
         if debug_mode: leg.show_image()
     else:
         legendboxes = None
-        print('There is no legend in this plot, skipping legend elaboration...\n')
+        print('There is no legend in this plot, skipping legend elaboration...')
+    print('--- STOP LEGEND LOG ---\n')
 
     ex = Exporter(image_dir, labelboxes, legendboxes)
     ex.compose_export_dataset()
@@ -65,14 +66,18 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if os.path.isfile(args.filename):
+    if os.path.isfile(args.pathname):
         # takes in input file
-        main(args.filename, args.language, args.type, args.size_factor, args.debug_mode)
+        main(args.pathname, args.language, args.type, args.size_factor, args.debug_mode)
+        print('Extraction completed!')
     else:
         # takes in input entire directory
         if os.path.isdir(args.pathname):
-            for fn in os.listdir(args.pathname):
+            n_files = len(os.listdir(args.pathname))
+            for i, fn in enumerate(os.listdir(args.pathname)):
                 complete_fn = os.path.join(args.pathname, fn)
+                print('Extracting file {n} of {n_files}...\n'.format(n = i+1, n_files = n_files))
                 main(complete_fn, args.language, args.type, args.size_factor, args.debug_mode)
+            print('Extraction completed!')
         else:
             print('ERROR: File {fn} does not exist'.format(fn = args.filename))

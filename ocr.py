@@ -455,7 +455,7 @@ class PlotOCR_Blob(PlotOCR_Box):
 			# ignoring all keypoints
 			# that have neglectable
 			# radius
-			if r >= 10:
+			if r >= 5:
 				blob = BlobBox(cx, cy, r)
 				self.__blobboxes.append(blob)
 
