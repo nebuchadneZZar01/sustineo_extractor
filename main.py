@@ -55,7 +55,7 @@ if __name__ == '__main__':
                         help='language of the plot to extract (default="ita")')
 
     parser.add_argument('-t', '--type', type=str, default='box',\
-                        help='type of plot from where extract the informations (default="box")')
+                        help='type of plot from where extract the informations (possible types=["box", "blob"], default="box")')
 
     parser.add_argument('-d', '--debug-mode', action='store_true',\
                         help='activate the visualization of the various passes')
@@ -77,7 +77,11 @@ if __name__ == '__main__':
             for i, fn in enumerate(os.listdir(args.pathname)):
                 complete_fn = os.path.join(args.pathname, fn)
                 print('Extracting file {n} of {n_files}...\n'.format(n = i+1, n_files = n_files))
-                main(complete_fn, args.language, args.type, args.size_factor, args.debug_mode)
+                try:
+                    main(complete_fn, args.language, args.type, args.size_factor, args.debug_mode)
+                except:
+                    print('There was an error extracting data from file {fn}!'.format(fn = args.pathname))
+                    continue
             print('Extraction completed!')
         else:
             print('ERROR: File {fn} does not exist'.format(fn = args.filename))

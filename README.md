@@ -218,7 +218,7 @@ options:
   -h, --help            show this help message and exit
   -l LANGUAGE, --language LANGUAGE
                         language of the plot to extract (default="ita")
-  -t TYPE, --type TYPE  type of plot from where extract the informations (default="box")
+  -t TYPE, --type TYPE  type of plot from where extract the informations (possible types=["box", "blob"], default="box")
   -d, --debug-mode      activate the visualization of the various passes
   -s SIZE_FACTOR, --size-factor SIZE_FACTOR
                         if used in debug mode, the image sizes will be divided by the choosen scale factor for a better visualization on lower resolution screens (default=1.5)

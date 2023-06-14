@@ -12,6 +12,8 @@ class OCR:
 		self.__lang = lang						# language of the labels
 
 		self.__image_gray = cv2.cvtColor(self.__image, cv2.COLOR_BGR2GRAY)
+
+		self.__textboxes = []					# will contain the bounding boxes of every single word
 		
 		# image sizes will be divided by scale factor
 		# to permit a better visualization on lower
@@ -45,9 +47,10 @@ class OCR:
 	@property
 	def language(self):
 		return self.__lang
-
-	def __process_text(self):
-		pass
+	
+	@property
+	def textboxes(self):
+		return self.__textboxes
 
 	def show_image(self):
 		pass
@@ -55,19 +58,15 @@ class OCR:
 	def get_data(self):
 		pass
 
-# OCR object class useful to
-# detect plot part of the image
-class PlotOCR_Box(OCR):
+# PlotOCR superclass defines the euristics
+# later used following the different type
+# of plots
+class PlotOCR(OCR):
 	def __init__(self, image, lang = str, scale_factor = float, debug_mode = bool):
-		super(PlotOCR_Box, self).__init__(image, lang, scale_factor, debug_mode)
+		super(PlotOCR, self).__init__(image, lang, scale_factor, debug_mode)
 		self.__labelboxes = []					# will contain the bounding boxes of the entire labels
-		self.__textboxes = []					# will contain the bounding boxes of every single word
 
 		_, self.__work_image = cv2.threshold(self.image_gray, 185, 255, cv2.THRESH_BINARY)
-
-	@property
-	def textboxes(self):
-		return self.__textboxes
 	
 	@property
 	def labelboxes(self):
@@ -76,141 +75,6 @@ class PlotOCR_Box(OCR):
 	@labelboxes.setter
 	def labelboxes(self, new_labelboxes):
 		self.__labelboxes = new_labelboxes
-	
-	# function that detects all the rectangles that contain the labels
-	def __extract_labels(self):
-		_, shapes = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
-
-		# we need to dilate the image in order to remove the lines
-		# otherwise, the boxes crossed by the line won't be detected
-		dilate_kernel = np.ones((3,3), np.uint8)
-		dilated_shapes = cv2.dilate(shapes, dilate_kernel)
-
-		if self.debug_mode:
-			tmp = cv2.resize(dilated_shapes, self.scale_size)
-
-			cv2.imshow('Plot OCR', tmp)
-			cv2.waitKey(1500)
-
-		contours, _ = cv2.findContours(dilated_shapes, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-		i = 0
-		for contour in contours:
-			if i == 0:
-				i = 1
-				continue
-	
-			# function to approximate the shape
-			approx = cv2.approxPolyDP(contour, 0.01 * cv2.arcLength(contour, True), True)
-			
-			if len(approx) >= 4 and len(approx) <= 8:
-				# actual rectangles
-				if len(approx) == 4:
-					A = approx[0][0]		# upper left vertex
-					D = approx[2][0]		# bottom right vertex
-
-					lb = LabelBox(A, D)
-					self.__labelboxes.append(lb)
-					
-					if self.debug_mode:
-						cv2.drawContours(self.image_debug, [contour], 0, (0, 255, 0), 2)
-						cv2.circle(self.image_debug, A, 2, (255, 255, 0), 4)
-						cv2.circle(self.image_debug, D, 2, (255, 255, 0), 4)
-
-				# merged rectangles
-				elif len(approx) == 8:
-					r1_A = approx[3][0]			# upper-left
-					r1_B = approx[4][0]			# upper-right
-					r1_C = approx[2][0]			# bottom-left
-					r1_D = approx[5][0]			# bottom-right
-
-					r2_A = approx[1][0]
-					r2_B = approx[6][0]
-					r2_C = approx[0][0]
-					r2_D = approx[7][0]
-
-					# define rect 1
-					lb1 = LabelBox(r1_A, r1_D)
-					self.__labelboxes.append(lb1)
-
-					# define rect 2 
-					lb2 = LabelBox(r2_A, r2_D)
-					self.__labelboxes.append(lb2)
-
-					if self.debug_mode:
-						cv2.drawContours(self.image_debug, [contour], 0, (0, 0, 255), 2)
-						
-						# draw rect 1
-						cv2.rectangle(self.image_debug, r1_A, r1_D, (0, 255, 0), 3)
-
-						# draw rect 2
-						cv2.rectangle(self.image_debug, r2_A, r2_D, (0, 255, 0), 3)
-
-						cv2.circle(self.image_debug, r1_A, 2, (255, 255, 0), 4)
-						cv2.circle(self.image_debug, r1_B, 2, (255, 255, 0), 4)
-						cv2.circle(self.image_debug, r1_C, 2, (255, 255, 0), 4)
-						cv2.circle(self.image_debug, r1_D, 2, (255, 255, 0), 4)
-
-						cv2.circle(self.image_debug, r2_A, 2, (0, 255, 255), 4)
-						cv2.circle(self.image_debug, r2_B, 2, (0, 255, 255), 4)
-						cv2.circle(self.image_debug, r2_C, 2, (0, 255, 255), 4)
-						cv2.circle(self.image_debug, r2_D, 2, (0, 255, 255), 4)
-				# for all figures that have more than 8 edges
-				elif len(contour) > 8:
-					len_contour = len(contour)
-					# this loop deletes all vertices such that the euclidean distance
-					# with the next one is lower than a certain offset
-					offset = 10
-					while len_contour > 8:
-						i = 0
-						while i < len_contour-1:
-							point1 = contour[i][0]
-							point2 = contour[i+1][0]
-							x1 = point1[0]
-							x2 = point2[0]
-							y1 = point1[1]
-							y2 = point2[1]
-							dist = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
-							if dist <= offset:
-								contour = np.delete(contour, i, axis=0)
-								len_contour -= 1
-								break
-							i += 1
-
-					approx = cv2.approxPolyDP(contour, 0.01 * cv2.arcLength(contour, True), True)
-
-					# then the shape can be divided into more two rectangles
-					try:
-						r1_A = approx[1][0]
-						r1_D = approx[5][0]			# bottom-right
-						
-						lb1 = LabelBox(r1_A, r1_D)
-						self.__labelboxes.append(lb1)
-
-						r2_B = approx[2][0]			# upper-right					
-						r2_C = approx[4][0]			# upper-right					
-						r2_D = approx[3][0]			# upper-left
-						r2_A = (r2_C[0], r2_B[1])
-
-						lb2 = LabelBox(r2_A, r2_D)
-						self.__labelboxes.append(lb2)
-
-						if self.debug_mode:
-							cv2.drawContours(self.__image_debug, [contour], 0, (0, 255, 255), 2)
-
-							# draw rect 1
-							cv2.rectangle(self.__image_debug, r1_A, r1_D, (0, 255, 0), 3)
-							cv2.circle(self.__image_debug, r1_A, 2, (255, 255, 0), 4)
-							cv2.circle(self.__image_debug, r1_D, 2, (255, 255, 0), 4)
-
-							# draw rect 2
-							cv2.rectangle(self.__image_debug, r2_A, r2_D, (0, 255, 0), 3)
-							cv2.circle(self.__image_debug, r2_A, 2, (255, 255, 0), 4)
-							cv2.circle(self.__image_debug, r2_B, 2, (255, 255, 0), 4)
-							cv2.circle(self.__image_debug, r2_C, 2, (255, 255, 0), 4)
-							cv2.circle(self.__image_debug, r2_D, 2, (255, 255, 0), 4)
-					except:
-						print('no vertices')
 
 	# function that calls the tesseract OCR
 	def process_text(self):
@@ -296,23 +160,164 @@ class PlotOCR_Box(OCR):
 					if self.debug_mode:
 						cv2.rectangle(self.image_debug, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
-					self.__textboxes.append(tb)
+					self.textboxes.append(tb)
+
+# OCR object class useful to
+# detect plot part of the image
+class PlotOCR_Box(PlotOCR):
+	def __init__(self, image, lang = str, scale_factor = float, debug_mode = bool):
+		super(PlotOCR_Box, self).__init__(image, lang, scale_factor, debug_mode)
+	
+	# function that detects all the rectangles that contain the labels
+	def __extract_labels(self):
+		_, shapes = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
+
+		# we need to dilate the image in order to remove the lines
+		# otherwise, the boxes crossed by the line won't be detected
+		dilate_kernel = np.ones((3,3), np.uint8)
+		dilated_shapes = cv2.dilate(shapes, dilate_kernel)
+
+		if self.debug_mode:
+			tmp = cv2.resize(dilated_shapes, self.scale_size)
+
+			cv2.imshow('Plot OCR', tmp)
+			cv2.waitKey(1500)
+
+		contours, _ = cv2.findContours(dilated_shapes, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+		i = 0
+		for contour in contours:
+			if i == 0:
+				i = 1
+				continue
+	
+			# function to approximate the shape
+			approx = cv2.approxPolyDP(contour, 0.01 * cv2.arcLength(contour, True), True)
+			
+			if len(approx) >= 4 and len(approx) <= 8:
+				# actual rectangles
+				if len(approx) == 4:
+					A = approx[0][0]		# upper left vertex
+					D = approx[2][0]		# bottom right vertex
+
+					lb = LabelBox(A, D)
+					self.labelboxes.append(lb)
+					
+					if self.debug_mode:
+						cv2.drawContours(self.image_debug, [contour], 0, (0, 255, 0), 2)
+						cv2.circle(self.image_debug, A, 2, (255, 255, 0), 4)
+						cv2.circle(self.image_debug, D, 2, (255, 255, 0), 4)
+
+				# merged rectangles
+				elif len(approx) == 8:
+					r1_A = approx[3][0]			# upper-left
+					r1_B = approx[4][0]			# upper-right
+					r1_C = approx[2][0]			# bottom-left
+					r1_D = approx[5][0]			# bottom-right
+
+					r2_A = approx[1][0]
+					r2_B = approx[6][0]
+					r2_C = approx[0][0]
+					r2_D = approx[7][0]
+
+					# define rect 1
+					lb1 = LabelBox(r1_A, r1_D)
+					self.labelboxes.append(lb1)
+
+					# define rect 2 
+					lb2 = LabelBox(r2_A, r2_D)
+					self.labelboxes.append(lb2)
+
+					if self.debug_mode:
+						cv2.drawContours(self.image_debug, [contour], 0, (0, 0, 255), 2)
+						
+						# draw rect 1
+						cv2.rectangle(self.image_debug, r1_A, r1_D, (0, 255, 0), 3)
+
+						# draw rect 2
+						cv2.rectangle(self.image_debug, r2_A, r2_D, (0, 255, 0), 3)
+
+						cv2.circle(self.image_debug, r1_A, 2, (255, 255, 0), 4)
+						cv2.circle(self.image_debug, r1_B, 2, (255, 255, 0), 4)
+						cv2.circle(self.image_debug, r1_C, 2, (255, 255, 0), 4)
+						cv2.circle(self.image_debug, r1_D, 2, (255, 255, 0), 4)
+
+						cv2.circle(self.image_debug, r2_A, 2, (0, 255, 255), 4)
+						cv2.circle(self.image_debug, r2_B, 2, (0, 255, 255), 4)
+						cv2.circle(self.image_debug, r2_C, 2, (0, 255, 255), 4)
+						cv2.circle(self.image_debug, r2_D, 2, (0, 255, 255), 4)
+				# for all figures that have more than 8 edges
+				elif len(contour) > 8:
+					len_contour = len(contour)
+					# this loop deletes all vertices such that the euclidean distance
+					# with the next one is lower than a certain offset
+					offset = 10
+					while len_contour > 8:
+						i = 0
+						while i < len_contour-1:
+							point1 = contour[i][0]
+							point2 = contour[i+1][0]
+							x1 = point1[0]
+							x2 = point2[0]
+							y1 = point1[1]
+							y2 = point2[1]
+							dist = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+							if dist <= offset:
+								contour = np.delete(contour, i, axis=0)
+								len_contour -= 1
+								break
+							i += 1
+
+					approx = cv2.approxPolyDP(contour, 0.01 * cv2.arcLength(contour, True), True)
+
+					# then the shape can be divided into more two rectangles
+					try:
+						r1_A = approx[1][0]
+						r1_D = approx[5][0]			# bottom-right
+						
+						lb1 = LabelBox(r1_A, r1_D)
+						self.labelboxes.append(lb1)
+
+						r2_B = approx[2][0]			# upper-right					
+						r2_C = approx[4][0]			# upper-right					
+						r2_D = approx[3][0]			# upper-left
+						r2_A = (r2_C[0], r2_B[1])
+
+						lb2 = LabelBox(r2_A, r2_D)
+						self.labelboxes.append(lb2)
+
+						if self.debug_mode:
+							cv2.drawContours(self.__image_debug, [contour], 0, (0, 255, 255), 2)
+
+							# draw rect 1
+							cv2.rectangle(self.__image_debug, r1_A, r1_D, (0, 255, 0), 3)
+							cv2.circle(self.__image_debug, r1_A, 2, (255, 255, 0), 4)
+							cv2.circle(self.__image_debug, r1_D, 2, (255, 255, 0), 4)
+
+							# draw rect 2
+							cv2.rectangle(self.__image_debug, r2_A, r2_D, (0, 255, 0), 3)
+							cv2.circle(self.__image_debug, r2_A, 2, (255, 255, 0), 4)
+							cv2.circle(self.__image_debug, r2_B, 2, (255, 255, 0), 4)
+							cv2.circle(self.__image_debug, r2_C, 2, (255, 255, 0), 4)
+							cv2.circle(self.__image_debug, r2_D, 2, (255, 255, 0), 4)
+					except:
+						print('no vertices')
 
 	# composes the labelboxes verifying if the
 	# text is actually in that box
 	def __compose_labelboxes(self):
 		image_hsv = cv2.cvtColor(self.image_original, cv2.COLOR_BGR2HSV)
-		for lb in self.__labelboxes:
+		for lb in self.labelboxes:
 			lb.color_rgb = (self.image_original[lb.position[1]+2, lb.position[0]+2])
 			lb.color_hsv = (image_hsv[lb.position[1]+2, lb.position[0]+2])
-			for tb in self.__textboxes:
+			for tb in self.textboxes:
 				lb.add_text_in_label(tb)
 
 	# deletes all blank labelboxes
 	def __verify_labelboxes(self):
-		for lb in self.__labelboxes.copy():
+		for lb in self.labelboxes.copy():
 			if len(lb.label.strip(' ')) == 0 or len(lb.label) == 0:
-				self.__labelboxes.remove(lb)
+				self.labelboxes.remove(lb)
 			else:
 				# removes all labelboxes containing
 				# only single-character words
@@ -327,9 +332,9 @@ class PlotOCR_Box(OCR):
 				if control:
 					self.labelboxes.remove(lb)
 
-		print('Labels extracted: {N}\n'.format(N = len(self.__labelboxes)))
+		print('Labels extracted: {N}\n'.format(N = len(self.labelboxes)))
 
-		for lb in self.__labelboxes:
+		for lb in self.labelboxes:
 			print('Position: ({x},{y})\nText: {label}\nLabel length: {l}\nValue: {center}\n'.format(x = lb.position[0],\
 																								y = lb.position[1],\
 																								label = lb.label,
@@ -345,7 +350,7 @@ class PlotOCR_Box(OCR):
 		self.__verify_labelboxes()
 
 	def get_data(self):
-		return self.__labelboxes
+		return self.labelboxes
 
 	# used in debug mode for the visualization
 	def show_image(self):
@@ -368,7 +373,7 @@ class PlotOCR_Box(OCR):
 	def get_colors_rgb(self):
 		colors = []
 
-		for lb in self.__labelboxes:
+		for lb in self.labelboxes:
 			if lb.color_rgb() not in colors:
 				col = []
 				for gr_lev in lb.color_rgb():
@@ -384,7 +389,7 @@ class PlotOCR_Box(OCR):
 	def get_colors_hsv(self):
 		colors = []
 
-		for lb in self.__labelboxes:
+		for lb in self.labelboxes:
 			if lb.color_hsv not in colors:
 				col = []
 				for val in lb.color_hsv:
@@ -394,8 +399,10 @@ class PlotOCR_Box(OCR):
 				colors.append(col)
 		
 		return colors
-	
-class PlotOCR_Blob(PlotOCR_Box):
+
+# class used exclusively on plots
+# that have blob-type forms 
+class PlotOCR_Blob(PlotOCR):
 	def __init__(self, image, lang = str, scale_factor = float, debug_mode = bool):
 		super(PlotOCR_Blob, self).__init__(image, lang, scale_factor, debug_mode)
 		params = cv2.SimpleBlobDetector_Params()
@@ -447,10 +454,10 @@ class PlotOCR_Blob(PlotOCR_Box):
 		keypoints = self.__blob_detector.detect(dilated_shapes)
 		
 		for keypoint in keypoints:
-			cx = int(keypoint.pt[0])
-			cy = int(keypoint.pt[1])
-			s = keypoint.size
-			r = int(math.floor(s/2))
+			cx = int(keypoint.pt[0])			# center x coord
+			cy = int(keypoint.pt[1])			# center y coord
+			s = keypoint.size					# keypoint size
+			r = int(math.floor(s/2))			# radius
 
 			# ignoring all keypoints
 			# that have neglectable
@@ -627,20 +634,20 @@ class LegendOCR(OCR):
 		self.colors_pos = []
 		# dilatation_kernel = np.ones((1,1), np.uint8)
 		# self.__work_image = cv2.dilate(self.__work_image, erosion_kernel)
-		self.__labelboxes = labelboxes
+		self.labelboxes = labelboxes
 
 		if debug_mode:
 			tmp = cv2.resize(self.__work_image, self.scale_size)
 
 			cv2.imshow('Legend OCR', tmp)
 			cv2.waitKey(1500)
-
+	
+	# takes the text data
+	# calling the OCR
 	def __process_text(self):
 		res = pt.image_to_data(self.__work_image, lang=self.language, output_type = pt.Output.DICT)
 		res = pd.DataFrame(res)
 		res = res.loc[res['conf'] != -1]
-
-		self.__textboxes = []
 
 		for i in range(0, len(res)):
 			# extract the bounding box coordinates of the text region from
@@ -663,7 +670,7 @@ class LegendOCR(OCR):
 						if self.debug_mode:
 							cv2.rectangle(self.image_debug, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
-						self.__textboxes.append(tb)
+						self.textboxes.append(tb)
 
 	# using hsv color-space, it calls inRange()
 	# function to detect color position
@@ -710,16 +717,18 @@ class LegendOCR(OCR):
 		if column_leg:
 			self.colors_pos = sorted(self.colors_pos, key=lambda col: col[0][1])
 
+	# joins the detected words
+	# with the detected colors
 	def __process_legend(self):
-		if len(self.__textboxes) > 0:
-			label = self.__textboxes[0].text
-			for i in range(len(self.__textboxes)):
-				if i == len(self.__textboxes)-1: break
+		if len(self.textboxes) > 0:
+			label = self.textboxes[0].text
+			for i in range(len(self.textboxes)):
+				if i == len(self.textboxes)-1: break
 				else:
-					if self.__textboxes[i].distance_from_textbox_row(self.__textboxes[i+1]) < 15:
-						label += ' ' + self.__textboxes[i+1].text
+					if self.textboxes[i].distance_from_textbox_row(self.textboxes[i+1]) < 15:
+						label += ' ' + self.textboxes[i+1].text
 					else:
-						label += '\n' + self.__textboxes[i+1].text
+						label += '\n' + self.textboxes[i+1].text
 
 			legends_labels = label.split('\n')
 
@@ -730,10 +739,9 @@ class LegendOCR(OCR):
 			# linked to the label via a LegendBox (to-do)
 			self.__legendboxes = []
 			for lb in legends_labels:
-				for tb in self.__textboxes:
+				for tb in self.textboxes:
 					dists = []
 					if lb.split(' ')[0] == tb.text:
-						tmp_tb = tb		
 						for c in self.colors_pos:
 							c_pos = c[0]
 							dist = tb.distance_from_point(c_pos)
