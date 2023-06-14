@@ -1,5 +1,4 @@
-,Label,Kind,GroupRel,StakeRel,RankGroup,RankStake,RankAbsolute,Alignment
-0,Ambientale,Unknown,238.56,0.0,6.666666666666667,0.0,6.666666666666667,168.68739371986277
-1,Per il gruppo,Unknown,0.0,198.81656804733728,0.0,3.3333333333333335,0.0,140.58454347850886
-2,Risultato di queste attivit,Unknown,173.28,245.5621301775148,3.3333333333333335,6.666666666666667,3.3333333333333335,51.1111844071295
-3,La matrice di materialit riportata di,Unknown,300.0,300.0,10.0,10.0,10.0,0.0
+,Label,Macrotheme,GroupRel,StakeRel,RankGroup,RankStake,RankAbsolute,Alignment
+0,Ambientale,Unknown,300.0,0.0,10.0,0.0,10.0,100.0
+1,Per il gruppo,Unknown,0.0,185.46458141674333,0.0,5.0,0.0,24.403581625659264
+2,Temi identificati come materiali e da,Unknown,151.50905432595573,300.0,5.0,10.0,5.0,0.0

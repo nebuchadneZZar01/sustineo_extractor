@@ -58,17 +58,17 @@ class Exporter:
         datas = []
 
         for lb in self.plot_data:
-            kind = 'Unknown'
+            macrotheme = 'Unknown'
             if self.legend_data is not None:
                 for legb in self.legend_data:
                     if legb.color == lb.color_rgb:
-                        kind = legb.label
+                        macrotheme = legb.label
             group_value = self.__renormalize_x_group(lb.center[0], 0, 300)
             stake_value = self.__renormalize_y_stake(lb.center[1], 0, 300)
             
-            datas.append((lb.label, kind, group_value, stake_value))
+            datas.append((lb.label, macrotheme, group_value, stake_value))
 
-        self.__dataframe = pd.DataFrame(datas, columns=('Label', 'Kind', 'GroupRel', 'StakeRel'))
+        self.__dataframe = pd.DataFrame(datas, columns=('Label', 'Macrotheme', 'GroupRel', 'StakeRel'))
         
         # removing last blank char
         self.__dataframe['Label'] = self.__dataframe.apply(lambda x: x['Label'][:-1] if x['Label'][-1] == ' ' else x['Label'], axis = 1)
@@ -132,6 +132,13 @@ class Exporter:
         df = self.dataframe
         df['Alignment'] = df[['GroupRel', 'StakeRel']].apply(tuple, axis=1).apply(self.__alignment)
 
+        # normalization of the distance in [0, 100]
+        # tipically these values are no higher than 300
+        tmp = df['Alignment'].values
+        tmp_norm = np.interp(tmp, (tmp.min(), tmp.max()), (0, 100))
+
+        df['Alignment'] = tmp_norm
+
         print('\nAdded alignment measures:')
         print(self.dataframe.head())
 
@@ -180,7 +187,7 @@ class Exporter:
         fig_height = max(8, n_points / 4)
 
         # taking colors for datasets
-        kind_colors = {kind: color for kind, color in zip(self.dataframe['Kind'].unique(), cm.tab20.colors)}
+        macrotheme_colors = {macrotheme: color for macrotheme, color in zip(self.dataframe['Macrotheme'].unique(), cm.tab20.colors)}
 
         # mapping strings into numerical values
         label_mapping = {label: i for i, label in enumerate(self.dataframe['Label'].unique())}
@@ -190,7 +197,7 @@ class Exporter:
         ax.axline((0,0), slope=1, linestyle='-', color='red', label='Perfect alignment')               # alignment line
 
         # generating the scatterplot
-        scatter = ax.scatter(self.dataframe['GroupRel'], self.dataframe['StakeRel'], c=[label_mapping[label] for label in self.dataframe['Label']], edgecolors=[kind_colors[kind] for kind in self.dataframe['Kind']], cmap='tab20', marker='o', linewidth=2, s=[100 for el in range(len(label_mapping))])
+        scatter = ax.scatter(self.dataframe['GroupRel'], self.dataframe['StakeRel'], c=[label_mapping[label] for label in self.dataframe['Label']], edgecolors=[macrotheme_colors[macrotheme] for macrotheme in self.dataframe['Macrotheme']], cmap='tab20', marker='o', linewidth=2, s=[100 for el in range(len(label_mapping))])
         self.__draw_perpendicular_distance(ax, self.dataframe['GroupRel'], self.dataframe['StakeRel'])
         handles, labels = plt.gca().get_legend_handles_labels()
         by_label = dict(zip(labels, handles))
@@ -199,8 +206,8 @@ class Exporter:
         label_cmap = cm.get_cmap('tab20', len(self.dataframe['Label'].unique()))
         label_legend_elements = [Patch(facecolor=label_cmap(i), label=label) for i, label in enumerate(self.dataframe['Label'].unique())]
 
-        kind_cmap = cm.get_cmap('tab20', len(self.dataframe['Kind'].unique()))
-        kind_legend_elements = [Patch(facecolor=kind_cmap(i), edgecolor=kind_cmap(i), label=kind) for i, kind in enumerate(self.dataframe['Kind'].unique())]
+        macrotheme_cmap = cm.get_cmap('tab20', len(self.dataframe['Macrotheme'].unique()))
+        macrotheme_legend_elements = [Patch(facecolor=macrotheme_cmap(i), edgecolor=macrotheme_cmap(i), label=macrotheme) for i, macrotheme in enumerate(self.dataframe['Macrotheme'].unique())]
 
         # # generating legends
         # line legend
@@ -211,9 +218,9 @@ class Exporter:
         ax2.legend(handles=label_legend_elements, title='Label', loc = 'lower left', bbox_to_anchor=(0, 1))
         ax2.axis('off')
 
-        # kind legend
+        # macrotheme legend
         ax3 = ax2.twinx()
-        ax3.legend(handles=kind_legend_elements, title='Kind', loc = 'lower right', bbox_to_anchor=(1, 1))
+        ax3.legend(handles=macrotheme_legend_elements, title='Macrotheme', loc = 'lower right', bbox_to_anchor=(1, 1))
         ax3.axis('off')
 
         ax.set_xlabel('Group Relevance')

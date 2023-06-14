@@ -204,7 +204,7 @@ class PDFToImage:
                     tmp = cv2.resize(mat_matrix, (int(mat_matrix.shape[1]/3), int(mat_matrix.shape[0]/3)))
                     cv2.imshow('Finding materiality matrix', tmp)
 
-                    cv2.waitKey(1500)
+                    cv2.waitKey(0)
                     cv2.destroyAllWindows()
 
                     # asking user if the cropped region is ok

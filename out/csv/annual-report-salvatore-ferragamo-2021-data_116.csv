@@ -1,12 +1,12 @@
-,Label,Kind,GroupRel,StakeRel,RankGroup,RankStake,RankAbsolute,Alignment
-0,O responsabilit sociale,Unknown,206.50887573964496,0.0,6.0,0.0,6.0,146.02382641071304
-1,O responsabilit verso le persone,Unknown,32.544378698224854,17.100000000000023,1.0,1.0,1.0,10.920824908727841
-2,Animal welfare,Unknown,35.50295857988166,118.19999999999999,2.0,2.0,2.0,58.47563877223046
-3,Sistema di,Unknown,169.52662721893492,147.6,4.0,3.0,4.0,15.504466795058415
-4,Comunit,Unknown,115.38461538461539,154.5,3.0,4.0,3.0,27.658753710258413
-5,O customer experience anticorruzione,Unknown,236.68639053254438,164.4,8.0,5.0,8.0,51.11419693306117
-6,Biodiversit,Unknown,0.0,180.9,0.0,6.0,0.0,127.91561671664644
-7,Performance,Unknown,267.15976331360946,184.5,9.0,7.0,9.0,58.449279170328246
-8,Utilizzo responsabile consumi responsabili,Unknown,202.66272189349112,221.7,5.0,8.0,5.0,13.461388444446614
-9,Innovazione responsabile ed economia circolare,Unknown,218.63905325443787,270.3,7.0,9.0,7.0,36.529805766304094
+,Label,Macrotheme,GroupRel,StakeRel,RankGroup,RankStake,RankAbsolute,Alignment
+0,O responsabilit sociale,Unknown,206.50887573964496,0.0,7.0,0.0,7.0,100.0
+1,O responsabilit verso le persone,Unknown,32.544378698224854,17.100000000000023,1.0,1.0,1.0,7.478796561604575
+2,Animal welfare,Unknown,35.50295857988166,118.19999999999999,2.0,2.0,2.0,40.04527220630372
+3,Sistema di,Unknown,169.52662721893492,147.6,5.0,3.0,5.0,10.61776504297995
+4,Anticorruzione,Unknown,115.38461538461539,154.5,3.0,4.0,3.0,18.941260744985673
+5,Performance,Unknown,236.68639053254438,164.4,9.0,5.0,9.0,35.00401146131805
+6,Biodiversit,Unknown,0.0,180.9,0.0,6.0,0.0,87.59914040114614
+7,Consumi responsabili,Unknown,144.37869822485206,204.0,4.0,7.0,4.0,28.87106017191978
+8,Utilizzo responsabile dei prodotti chimici,Unknown,202.66272189349112,221.7,6.0,8.0,6.0,9.218624641833806
+9,Innovazione responsabile ed economia circolare,Unknown,218.63905325443787,270.3,8.0,9.0,8.0,25.016332378223506
 10,Cultura di sostenibilit,Unknown,300.0,300.0,10.0,10.0,10.0,0.0
