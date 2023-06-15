@@ -156,7 +156,8 @@ class LabelBox(Box):
     # bounding box is contained in the label box
     def add_text_in_label(self, tb=TextBox):
         if tb.in_box(self):
-            self.__label += tb.text + ' '
+            self.__label += tb.text.lower() + ' '
+            self.__label = self.__label.capitalize()
         else:
             pass
 
