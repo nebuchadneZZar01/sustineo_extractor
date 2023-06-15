@@ -272,7 +272,8 @@ class LegendBox(Box):
 
     @label.setter
     def label(self, new_label):
-        self.__label = new_label
+        self.__label = new_label.lower()
+        self.__label = self.label.capitalize()
 
     @color.setter
     def color(self, new_color):
