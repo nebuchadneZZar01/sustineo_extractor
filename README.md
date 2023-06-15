@@ -17,13 +17,13 @@ A `python` software for materiality matrices extraction.
 ## Description
 This `python` software can be used to extract data from block-form materiality matrices, in box-type form and in blob-type form, like the ones that follow.
 
-![image](src/img/box/amadori2_35.png)
+![image](src/img/box/Amadori_Report_Sostenibilita-2020_35.png)
 
-![image](src/img/blob/acsm_agam_29.png)
+![image](src/img/blob/2786-la-doria-bilancio-di-sostenibilita-2021itabassa_99.png)
 
 You can obtain an output like the following:
 
-![image](out/img/amadori2.png)
+![image](out/img/Amadori_Report_Sostenibilita-2020_35.png)
 
 The software follows 5 different passes:
 1. [Plot/legend subdivision](#1-plotlegend-subdivision)
@@ -40,7 +40,7 @@ This process differs following the type of the plot image in input.
 In this case, a "bounding box" approach has been choosen: using the **Hough transform** (after binarizing the input image), the software is able to detect all the lines on the image. Being a $(3 \times 3)$-blocks plot, is very easy to detect these lines.\
 Next, the intersections are computed and between them, the software detects the minimum-area box of the plot, the one on the bottom-left. Using this rectangle, is then used a 1:3 aspect ratio to find the entire area of the plot: in particular, the subdivision is done using the three limiting vertices of the rectangle including the plot (top-left, bottom-left, top-right). 
 
-![image](plot_little_big.png)
+![image](readme_images/plot_crop_box.png)
 
 Finally, the cropped plot and legend sections of the image are passed as input to the data-extraction module of the software.
 
@@ -48,6 +48,8 @@ Finally, the cropped plot and legend sections of the image are passed as input t
 In this case, a different approach - based on a **blob detector** - has been choosen. 
 Using the detector, the software finds all the blobs (circular forms) that have the same coordinates, disposed both in horizontal and in vertical.\
 To distinguish the legend's blob from the actual plot's blob (representing the values in $(x,y)$ coordinates), the software counts the number of blobs that share the same coordinare; statistically, if more than two, then we are in presence of a legend.
+
+![image](readme_images/plot_crop_blob.png)
 
 Next, the software detects the first and the last blob composing the legend, and using them as delimiters, it "crops" the legend away from the input image.
 
@@ -76,7 +78,7 @@ Next, calling the `pyTesseract` module (python implementation for Google's *Tess
 All these informations are used to instantiate `TextBox` class objects for every detected word.
 
 ##### Box-type
-The bounding boxes and respective coordinates are used to detect which word is contained in which colored box, and thus in which `LabelBox`, forming then the label.
+The bounding boxes and the respective coordinates are used to detect which word is contained in which colored box, and thus in which `LabelBox`, forming then the label.
 
 ##### Blob-type
 Every `TextBox` is put into a `LabelBoxColorless` according to this heuristic:
@@ -281,7 +283,7 @@ where:
 ##### PNG-format file
 You can obtain an output like the following:
 
-![image](out/img/amadori2.png)
+![image](out/img/Amadori_Report_Sostenibilita-2020_35.png)
 
 The perfect alignment line, passing through the origin, means the perfect alignment of the relevance of that materiality component according to the both the group and the stakeholders (that means, the relevance is the same accoring to both); the alignment distance is the distance to this perfect alignment.
 
