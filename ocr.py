@@ -66,7 +66,7 @@ class PlotOCR(OCR):
 		super(PlotOCR, self).__init__(image, lang, scale_factor, debug_mode)
 		self.__labelboxes = []					# will contain the bounding boxes of the entire labels
 
-		_, self.__work_image = cv2.threshold(self.image_gray, 185, 255, cv2.THRESH_BINARY)
+		_, self.work_image = cv2.threshold(self.image_gray, 185, 255, cv2.THRESH_BINARY)
 	
 	@property
 	def labelboxes(self):
@@ -76,9 +76,17 @@ class PlotOCR(OCR):
 	def labelboxes(self, new_labelboxes):
 		self.__labelboxes = new_labelboxes
 
+	@property
+	def work_image(self):
+		return self.__work_image
+	
+	@work_image.setter
+	def work_image(self, new_work_image):
+		self.__work_image = new_work_image
+
 	# function that calls the tesseract OCR
 	def process_text(self):
-		res = pt.image_to_data(self.__work_image, lang=self.language, output_type = pt.Output.DICT)
+		res = pt.image_to_data(self.work_image, lang=self.language, output_type = pt.Output.DICT)
 		res = pd.DataFrame(res)
 		res = res.loc[res['conf'] != -1]
 
@@ -100,7 +108,7 @@ class PlotOCR(OCR):
 			if conf > 80:
 				if len(text.strip(' ')) != 0:
 					# the region of interest of the letter
-					letter_roi = self.__work_image[y:y+h, x:x+w]
+					letter_roi = self.work_image[y:y+h, x:x+w]
 
 					w_cnt = 0
 					b_cnt = 0
@@ -117,16 +125,16 @@ class PlotOCR(OCR):
 						print('In the threshold image, the text is white')
 						print('Converting to negative')
 
-						self.__work_image = 255 - self.__work_image
+						self.work_image = 255 - self.work_image
 						dilatation_kernel = np.ones((2,2), np.uint8)
-						self.__work_image = cv2.dilate(self.__work_image, dilatation_kernel)
+						self.work_image = cv2.dilate(self.work_image, dilatation_kernel)
 
-						res = pt.image_to_data(self.__work_image, lang='ita', output_type = pt.Output.DICT)
+						res = pt.image_to_data(self.work_image, lang='ita', output_type = pt.Output.DICT)
 						res = pd.DataFrame(res)
 						res = res.loc[res['conf'] != -1]
 
 						if self.debug_mode:
-							tmp = cv2.resize(self.__work_image, self.scale_size)
+							tmp = cv2.resize(self.work_image, self.scale_size)
 
 							cv2.imshow('Plot OCR', tmp)
 							cv2.waitKey(1500)
@@ -355,7 +363,7 @@ class PlotOCR_Box(PlotOCR):
 	# used in debug mode for the visualization
 	def show_image(self):
 		scaled_image = cv2.resize(self.image_debug, self.scale_size)
-		scaled_threshold = cv2.resize(self.__work_image, self.scale_size)
+		scaled_threshold = cv2.resize(self.work_image, self.scale_size)
 		scaled_grayscale = cv2.resize(self.image_debug, self.scale_size)
 		
 		cv2.imshow('Plot OCR', scaled_grayscale)
@@ -363,10 +371,6 @@ class PlotOCR_Box(PlotOCR):
 		cv2.imshow('Plot OCR', scaled_image)
 		cv2.waitKey(1500)
 		cv2.destroyWindow('Plot OCR')
-
-	
-	def get_image_work(self):
-		return self.__work_image
 
 	# returns colors (in rgb format)
 	# of the labelboxes in the plot
@@ -630,14 +634,12 @@ class LegendOCR(OCR):
 	def __init__(self, image, labelboxes, lang, scale_factor, debug_mode):
 		super(LegendOCR, self).__init__(image, lang, scale_factor, debug_mode)
 		
-		_, self.__work_image = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
+		_, self.work_image = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)
 		self.colors_pos = []
-		# dilatation_kernel = np.ones((1,1), np.uint8)
-		# self.__work_image = cv2.dilate(self.__work_image, erosion_kernel)
 		self.labelboxes = labelboxes
 
 		if debug_mode:
-			tmp = cv2.resize(self.__work_image, self.scale_size)
+			tmp = cv2.resize(self.work_image, self.scale_size)
 
 			cv2.imshow('Legend OCR', tmp)
 			cv2.waitKey(1500)
@@ -645,7 +647,7 @@ class LegendOCR(OCR):
 	# takes the text data
 	# calling the OCR
 	def __process_text(self):
-		res = pt.image_to_data(self.__work_image, lang=self.language, output_type = pt.Output.DICT)
+		res = pt.image_to_data(self.work_image, lang=self.language, output_type = pt.Output.DICT)
 		res = pd.DataFrame(res)
 		res = res.loc[res['conf'] != -1]
 
@@ -777,7 +779,7 @@ class LegendOCR(OCR):
 
 	def show_image(self):
 		scaled_image = cv2.resize(self.image_debug, self.scale_size)
-		scaled_threshold = cv2.resize(self.__work_image, self.scale_size)
+		scaled_threshold = cv2.resize(self.work_image, self.scale_size)
 		scaled_grayscale = cv2.resize(self.image_gray, self.scale_size)
 		
 		cv2.imshow('Legend OCR', scaled_grayscale)
