@@ -12,7 +12,7 @@ DPI = 300                       # image DPI
 ZOOM = DPI/72                   # image zoom
 
 class PDFToImage:
-    def __init__(self, path = str, language = str, debug_mode = False):
+    def __init__(self, path = str, language = str, debug_mode = False, size_factor = float):
         self.__path = path
         self.__filename = os.path.basename(self.__path)[:-4]
 
@@ -27,6 +27,10 @@ class PDFToImage:
         self.__lang = language
 
         self.__debug_mode = debug_mode
+
+        if debug_mode:
+            self.__size_factor = size_factor if size_factor != 0.0 else 1.0
+            print(f'scale factor is {size_factor}')
 
     def __page_to_img(self):
         for page in range(self.__pdf_doc.page_count):
@@ -100,7 +104,6 @@ class PDFToImage:
             # page[2] -> filename
             # page[3] -> page number
             print('Processing {file}.pdf page {pg}...'.format(file = page[2], pg = page[3]))
-            resize = (int(page[1].shape[1]/3.5), int(page[1].shape[0]/3.5))
 
             page_copy = page[1].copy()
             page_gray = cv2.cvtColor(page_copy, cv2.COLOR_BGR2GRAY)
@@ -126,6 +129,8 @@ class PDFToImage:
                         cv2.rectangle(page_copy, (x, y), (x + w, y + h), (255, 255, 255), -1)
 
             if self.__debug_mode:
+                resize = (int(page[1].shape[1]/self.__size_factor), int(page[1].shape[0]/self.__size_factor))
+
                 tmp_res = cv2.resize(page_copy, resize)
                 cv2.imshow('Finding materiality matrix', tmp_res)
                 cv2.waitKey(1500)
@@ -201,7 +206,7 @@ class PDFToImage:
                     
                     fn_out = page[2] + '_' + str(page[3]) + '.png'                                                      # output filename
                     
-                    tmp = cv2.resize(mat_matrix, (int(mat_matrix.shape[1]/3), int(mat_matrix.shape[0]/3)))
+                    tmp = cv2.resize(mat_matrix, (int(mat_matrix.shape[1]/self.__size_factor), int(mat_matrix.shape[0]/self.__size_factor)))
                     cv2.imshow('Finding materiality matrix', tmp)
 
                     cv2.waitKey(0)
@@ -219,8 +224,9 @@ class PDFToImage:
                         elif choice.lower()[0] == 'n':
                             resized_page = cv2.resize(page[0], resize)
                             roi = cv2.selectROI('Select the region of interest', resized_page)
-                            mat_matrix = page[0][int(roi[1]*3.5):int(roi[1]*3.5) + int(roi[3]*3.5), int(roi[0]*3.5):int(roi[0]*3.5) + int(roi[2]*3.5)]
-                            resize_mat_matrix = (int(mat_matrix.shape[1]/3.5), int(mat_matrix.shape[0]/3.5))
+                            mat_matrix = page[0][int(roi[1]*self.__size_factor):int(roi[1]*self.__size_factor) + int(roi[3]*self.__size_factor),\
+                                                 int(roi[0]*self.__size_factor):int(roi[0]*self.__size_factor) + int(roi[2]*self.__size_factor)]
+                            resize_mat_matrix = (int(mat_matrix.shape[1]/self.__size_factor), int(mat_matrix.shape[0]/self.__size_factor))
                             tmp = cv2.resize(mat_matrix, resize_mat_matrix)
                             cv2.imshow('Selected materiality matrix', tmp)
                             cv2.waitKey(0)
@@ -243,8 +249,8 @@ class PDFToImage:
         self.__page_to_img()
         self.__img_to_plot()
 
-def main(pdf_path, language, debug):
-    extr = PDFToImage(pdf_path, language, debug)
+def main(pdf_path, language, debug, size_factor):
+    extr = PDFToImage(pdf_path, language, debug, size_factor)
     extr.run()
 
 if __name__ == '__main__':
@@ -262,16 +268,20 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--debug-mode', action='store_true',\
                         help='activate the visualization of the various passes')
 
+    parser.add_argument('-s', '--size-factor', type=float, default=1.5,\
+                        help='if used in debug mode, the image sizes will be divided by the choosen\
+                            scale factor for a better visualization on lower resolution screens (default=1.5)')
+    
     args = parser.parse_args()
 
     if os.path.isfile(args.pathname):
-        main(args.pathname, args.language, args.debug_mode)
+        main(args.pathname, args.language, args.debug_mode, args.size_factor)
     else:
         if os.path.isdir(args.pathname):
             n_files = len(os.listdir(args.pathname))
             for i, fn in enumerate(os.listdir(args.pathname)):
                 complete_fn = os.path.join(args.pathname, fn)
                 print('Converting file {n} of {n_files}...\n'.format(n = i+1, n_files = n_files))
-                main(complete_fn, args.language, args.debug_mode)
+                main(complete_fn, args.language, args.debug_mode, args.size_factor)
         else:
             print('ERROR: File {fn} does not exist'.format(fn = args.pathname))
