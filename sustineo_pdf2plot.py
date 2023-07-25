@@ -6,7 +6,7 @@ import math
 import numpy as np
 import pandas as pd
 import pytesseract as pt
-import languages
+import lib.pdf2plot.languages as languages
 
 DPI = 300                       # image DPI
 ZOOM = DPI/72                   # image zoom
