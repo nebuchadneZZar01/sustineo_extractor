@@ -17,7 +17,7 @@ class TableToCSV:
     def out_path(self):
         return self.__out_path
 
-    def extract(self):
+    def run(self):
         if not os.path.isdir(self.out_path):
             os.mkdir(self.out_path)
 
@@ -44,9 +44,6 @@ class TableToCSV:
             print(df.head)
             print('\n')
 
+            # exports the table into a csv file
             csv_filename = f'{self.filename}_p{page}_{n_table}.csv'
-
             table.to_csv(os.path.join(output_dir, csv_filename))
-
-t2csv = TableToCSV('test.pdf')
-t2csv.extract()
