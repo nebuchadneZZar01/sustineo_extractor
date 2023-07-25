@@ -1,9 +1,9 @@
 import argparse
 import os
 import cv2
-from ocr import *
-from plot_cropper import Cropper, BlobCropper
-from exporter import Exporter
+from lib.extractor.ocr import *
+from lib.extractor.plot_cropper import Cropper, BlobCropper
+from lib.extractor.exporter import Exporter
 
 def main(image_dir, language, plot_type, scale_visualization, debug_mode):
     image = cv2.imread(image_dir)
