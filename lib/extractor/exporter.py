@@ -230,7 +230,7 @@ class Exporter:
         # EXPORTATION SECTION
         img_extension = self.__image_basename[-3:len(self.__image_basename)]
 
-        out_dir = os.path.join('out', 'img')
+        out_dir = os.path.join('out', 'plot')
 
         if not os.path.isdir(out_dir):
             os.mkdir(out_dir)

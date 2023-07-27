@@ -16,7 +16,7 @@ class PDFToImage:
         self.__filename = os.path.basename(self.__path)[:-4]
 
         self.__pdf_doc = fitz.open(path)
-        self.__out_path = os.path.join(os.getcwd(), 'src', 'img')
+        self.__out_path = os.path.join(os.getcwd(), 'out', 'img')
 
         self.__magnify = fitz.Matrix(ZOOM, ZOOM)
 
