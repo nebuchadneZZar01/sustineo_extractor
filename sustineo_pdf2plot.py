@@ -5,9 +5,12 @@ from lib.pdf2plot.plot_extractor import PDFToImage
 from lib.pdf2plot.tables_extractor import TableToCSV
 
 def main(pdf_path, language, debug, size_factor):
+    print('Loading pdf...')
     plot_extr = PDFToImage(pdf_path, language, debug, size_factor)
     table_extr = TableToCSV(pdf_path)
+    print('--- SEARCHING FOR MATERIALITY MATRICES ---\n')
     plot_extr.run()
+    print('\n--- SEARCHING FOR TABLES ---\n')
     table_extr.run()
 
 if __name__ == '__main__':

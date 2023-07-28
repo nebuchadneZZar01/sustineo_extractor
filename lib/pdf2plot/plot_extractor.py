@@ -16,7 +16,8 @@ class PDFToImage:
         self.__filename = os.path.basename(self.__path)[:-4]
 
         self.__pdf_doc = fitz.open(path)
-        self.__out_path = os.path.join(os.getcwd(), 'out', 'img')
+        self.__out_path = os.path.join(os.getcwd(), 'out')
+        self.__out_img_path = os.path.join(os.getcwd(), 'out', 'img')
 
         self.__magnify = fitz.Matrix(ZOOM, ZOOM)
 
@@ -27,9 +28,15 @@ class PDFToImage:
 
         self.__debug_mode = debug_mode
 
-        if debug_mode:
-            self.__size_factor = size_factor if size_factor != 0.0 else 1.0
-            print(f'scale factor is {size_factor}')
+        self.__size_factor = size_factor if size_factor != 0.0 else 1.0
+
+    @property
+    def out_path(self):
+        return self.__out_path
+    
+    @property
+    def out_img_path(self):
+        return self.__out_img_path
 
     def __page_to_img(self):
         for page in range(self.__pdf_doc.page_count):
@@ -216,8 +223,14 @@ class PDFToImage:
                         choice = input('\nIs this crop ok? [Y/n] ')
                         # automatic crop is ok
                         if choice.lower()[0] == 'y':
-                            cv2.imwrite(os.path.join(self.__out_path, fn_out), mat_matrix)
-                            print('Materiality matrix image file was wrote in', os.path.join(self.__out_path, fn_out))
+                            if not os.path.isdir(self.out_path):
+                                os.mkdir(self.out_path)
+
+                            if not os.path.isdir(self.out_img_path):
+                                os.mkdir(self.out_img_path)
+
+                            cv2.imwrite(os.path.join(self.out_img_path, fn_out), mat_matrix)
+                            print(fn_out, 'was wrote in', self.out_img_path)
                             break
                         # user cropping
                         elif choice.lower()[0] == 'n':
@@ -230,8 +243,14 @@ class PDFToImage:
                             cv2.imshow('Selected materiality matrix', tmp)
                             cv2.waitKey(0)
 
-                            cv2.imwrite(os.path.join(self.__out_path, fn_out), mat_matrix)
-                            print(fn_out, 'was wrote in', self.__out_path)
+                            if not os.path.isdir(self.out_path):
+                                os.mkdir(self.out_path)
+
+                            if not os.path.isdir(self.out_img_path):
+                                os.mkdir(self.out_img_path)
+
+                            cv2.imwrite(os.path.join(self.out_img_path, fn_out), mat_matrix)
+                            print(fn_out, 'was wrote in', self.out_img_path)
                             break
                         # invalid choice
                         else:

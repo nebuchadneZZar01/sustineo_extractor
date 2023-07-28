@@ -7,7 +7,8 @@ class TableToCSV:
         self.__filename = os.path.basename(self.__path)[:-4]
 
         self.__tables = camelot.read_pdf(self.__path, flavor='lattice', pages='1-end')
-        self.__out_path = os.path.join(os.getcwd(), 'out', 'table')
+        self.__out_path = os.path.join(os.getcwd(), 'out')
+        self.__out_table_path = os.path.join(self.out_path, 'table')
 
     @property
     def filename(self):
@@ -17,11 +18,18 @@ class TableToCSV:
     def out_path(self):
         return self.__out_path
 
+    @property
+    def out_table_path(self):
+        return self.__out_table_path
+
     def run(self):
         if not os.path.isdir(self.out_path):
             os.mkdir(self.out_path)
 
-        output_dir = os.path.join(self.out_path, self.filename)
+        if not os.path.isdir(self.out_table_path):
+            os.mkdir(self.out_table_path)
+
+        output_dir = os.path.join(self.out_table_path, self.filename)
 
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
