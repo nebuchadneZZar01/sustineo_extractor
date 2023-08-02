@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import math
-from plot_elements import Blob
+from lib.extractor.plot_elements import Blob
 
 # object class that crops the image, returning
 # the plot-part and the legend-part in order to

@@ -2,7 +2,7 @@ import cv2
 import math
 import numpy as np
 import pandas as pd
-from plot_elements import TextBox, LabelBox, LabelBoxColorless, LegendBox, BlobBox
+from lib.extractor.plot_elements import TextBox, LabelBox, LabelBoxColorless, LegendBox, BlobBox
 from pytesseract import pytesseract as pt
 
 class OCR:
