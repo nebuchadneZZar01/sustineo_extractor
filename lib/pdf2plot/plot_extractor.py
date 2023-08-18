@@ -7,6 +7,8 @@ import pandas as pd
 import pytesseract as pt
 import lib.pdf2plot.languages as languages
 
+from lib.pdf2plot.document_page import DocumentPage
+
 DPI = 300                       # image DPI
 ZOOM = DPI/72                   # image zoom
 
@@ -19,9 +21,13 @@ class PDFToImage:
         self.__out_path = os.path.join(os.getcwd(), 'out')
         self.__out_img_path = os.path.join(os.getcwd(), 'out', 'img')
 
+        self.__out_plot_path = os.path.join(self.__out_img_path, 'plot')
+        self.__out_matrix_path = os.path.join(self.__out_img_path, 'm_matrix')
+
         self.__magnify = fitz.Matrix(ZOOM, ZOOM)
 
         self.__out_img_pages = []
+        self.__doc_pages = []
 
         self.__lang_dict = languages.LANGUAGE_DICT
         self.__lang = language
@@ -31,54 +37,79 @@ class PDFToImage:
         self.__size_factor = size_factor if size_factor != 0.0 else 1.0
 
     @property
+    def filename(self):
+        return self.__filename
+
+    @property
     def out_path(self):
         return self.__out_path
     
     @property
     def out_img_path(self):
         return self.__out_img_path
+    
+    @property
+    def out_plot_path(self):
+        return self.__out_plot_path
+    
+    @property
+    def out_matrix_path(self):
+        return self.__out_matrix_path
+    
+    @property
+    def doc_pages(self):
+        return self.__doc_pages
+    
+    @property
+    def lang_dict(self):
+        return self.__lang_dict
+    
+    @property
+    def lang(self):
+        return self.__lang
 
     def __page_to_img(self):
         for page in range(self.__pdf_doc.page_count):
             text = self.__pdf_doc[page].get_text()
             
-            if self.__lang_dict[self.__lang] in text.lower():
-                # getting the text-image
-                pix_text = self.__pdf_doc[page].get_pixmap(matrix=self.__magnify)
-                pix_text.set_dpi(DPI, DPI)
-                im_text = np.frombuffer(pix_text.samples, dtype=np.uint8).reshape(pix_text.h, pix_text.w, pix_text.n)
-                im_text = np.ascontiguousarray(im_text[..., [2, 1, 0]])          # rgb to bgr
+            # getting the text-image
+            pix_text = self.__pdf_doc[page].get_pixmap(matrix=self.__magnify)
+            pix_text.set_dpi(DPI, DPI)
+            im_text = np.frombuffer(pix_text.samples, dtype=np.uint8).reshape(pix_text.h, pix_text.w, pix_text.n)
+            im_text = np.ascontiguousarray(im_text[..., [2, 1, 0]])          # rgb to bgr
 
-                # getting the textless-image
-                # it is formed only of not-colored vector-type shapes
-                paths = self.__pdf_doc[page].get_drawings()
-                page_textless = self.__pdf_doc.new_page(width=self.__pdf_doc[page].rect.width, height=self.__pdf_doc[page].rect.height)
-                shape = page_textless.new_shape()
+            # getting the textless-image
+            # it is formed only of not-colored vector-type shapes
+            paths = self.__pdf_doc[page].get_drawings()
+            page_textless = self.__pdf_doc.new_page(width=self.__pdf_doc[page].rect.width, height=self.__pdf_doc[page].rect.height)
+            shape = page_textless.new_shape()
 
-                for path in paths:
-                    # draw each entry of the 'items' list
-                    for item in path["items"]:                                              # these are the draw commands
-                        if item[0] == "l":                                                  # line
-                            shape.draw_line(item[1], item[2])
-                        elif item[0] == "re":                                               # rectangle
-                            shape.draw_rect(item[1])
-                        elif item[0] == "qu":                                               # quad
-                            shape.draw_quad(item[1])
-                        elif item[0] == "c":                                                # curve
-                            shape.draw_bezier(item[1], item[2], item[3], item[4])
-                        else:
-                            raise ValueError("unhandled drawing", item)
+            for path in paths:
+                # draw each entry of the 'items' list
+                for item in path["items"]:                                              # these are the draw commands
+                    if item[0] == "l":                                                  # line
+                        shape.draw_line(item[1], item[2])
+                    elif item[0] == "re":                                               # rectangle
+                        shape.draw_rect(item[1])
+                    elif item[0] == "qu":                                               # quad
+                        shape.draw_quad(item[1])
+                    elif item[0] == "c":                                                # curve
+                        shape.draw_bezier(item[1], item[2], item[3], item[4])
+                    else:
+                        raise ValueError("unhandled drawing", item)
 
-                    shape.finish()
+                shape.finish()
 
-                shape.commit()
+            shape.commit()
 
-                pix_textless = page_textless.get_pixmap(matrix=self.__magnify)
-                pix_textless.set_dpi(DPI, DPI)
-                im_textless = np.frombuffer(pix_textless.samples, dtype=np.uint8).reshape(pix_textless.h, pix_textless.w, pix_textless.n)
-                im_textless = np.ascontiguousarray(im_textless[..., [2, 1, 0]])
+            pix_textless = page_textless.get_pixmap(matrix=self.__magnify)
+            pix_textless.set_dpi(DPI, DPI)
+            im_textless = np.frombuffer(pix_textless.samples, dtype=np.uint8).reshape(pix_textless.h, pix_textless.w, pix_textless.n)
+            im_textless = np.ascontiguousarray(im_textless[..., [2, 1, 0]])
 
-                self.__out_img_pages.append((im_text, im_textless, self.__filename, page))
+            self.__out_img_pages.append((im_text, im_textless, self.__filename, page))
+            doc_page = DocumentPage(self.filename, page, im_text, im_textless, text, 300)         # 300 pixels is a test
+            self.doc_pages.append(doc_page)
 
     # calculate y in Hough transform
     def __calc_y(self, x, rho, theta):
@@ -104,17 +135,13 @@ class PDFToImage:
 
     # crops the image-format page using the Hough transform
     def __img_to_plot(self):
-        for page in self.__out_img_pages:
-            # page[0] -> original image
-            # page[1] -> vectors image
-            # page[2] -> filename
-            # page[3] -> page number
-            print('Processing {file}.pdf page {pg}...'.format(file = page[2], pg = page[3]))
+        for doc_page in self.doc_pages:
+            print('Processing {file}.pdf page {pg}...'.format(file = doc_page.filename, pg = doc_page.page_number))
 
-            page_copy = page[1].copy()
+            page_copy = doc_page.vector_page.copy()
             page_gray = cv2.cvtColor(page_copy, cv2.COLOR_BGR2GRAY)
             thresh = cv2.threshold(page_gray, 180, 255, cv2.THRESH_BINARY)[1]
-            res = pt.image_to_data(thresh, lang=self.__lang, output_type = pt.Output.DICT)
+            res = pt.image_to_data(thresh, lang=self.lang, output_type = pt.Output.DICT)
             res = pd.DataFrame(res)
             res = res.loc[res['conf'] != -1]
 
@@ -134,9 +161,9 @@ class PDFToImage:
                     if len(text) > 1:
                         cv2.rectangle(page_copy, (x, y), (x + w, y + h), (255, 255, 255), -1)
 
-            if self.__debug_mode:
-                resize = (int(page[1].shape[1]/self.__size_factor), int(page[1].shape[0]/self.__size_factor))
+            resize = (int(doc_page.vector_page.shape[1]/self.__size_factor), int(doc_page.vector_page.shape[0]/self.__size_factor))
 
+            if self.__debug_mode:
                 tmp_res = cv2.resize(page_copy, resize)
                 cv2.imshow('Finding materiality matrix', tmp_res)
                 cv2.waitKey(1500)
@@ -151,9 +178,9 @@ class PDFToImage:
             columns = []
 
             if self.__debug_mode:
-                tmp = page[0].copy()
+                tmp = doc_page.raster_page.copy()
 
-            height, width, _ = page[0].shape
+            height, width, _ = doc_page.raster_page.shape
 
             if lines is not None:
                 for rho, theta, in lines[:,0,]:
@@ -208,9 +235,9 @@ class PDFToImage:
                     top_left = (0, i_top_left[1] - upper_offset) if (i_top_left[1] - upper_offset > 0) else (0, 0)
                     bottom_right = (width, i_bottom_right[1] + lower_offset) if (i_bottom_right[1] + lower_offset < height) else (width, height)
 
-                    mat_matrix = page[0][top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]                      # materiality matrix region
+                    mat_matrix = doc_page.raster_page[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]                      # materiality matrix region
                     
-                    fn_out = page[2] + '_' + str(page[3]) + '.png'                                                      # output filename
+                    fn_out = doc_page.filename + '_' + str(doc_page.page_number) + '.png'                                                      # output filename
                     
                     tmp = cv2.resize(mat_matrix, (int(mat_matrix.shape[1]/self.__size_factor), int(mat_matrix.shape[0]/self.__size_factor)))
                     cv2.imshow('Finding materiality matrix', tmp)
@@ -228,30 +255,56 @@ class PDFToImage:
 
                             if not os.path.isdir(self.out_img_path):
                                 os.mkdir(self.out_img_path)
-
-                            cv2.imwrite(os.path.join(self.out_img_path, fn_out), mat_matrix)
-                            print(fn_out, 'was wrote in', self.out_img_path)
+                            
+                            # if materiality matrix is in the page
+                            # save in the relative folder
+                            if self.lang_dict[self.lang] in doc_page.text.lower():
+                                if not os.path.isdir(self.out_matrix_path):
+                                    os.mkdir(self.out_matrix_path)
+                                cv2.imwrite(os.path.join(self.out_matrix_path, fn_out), mat_matrix)
+                                print(fn_out, 'was wrote in', self.out_matrix_path)
+                            # else save into another directory
+                            else:
+                                if not os.path.isdir(self.out_plot_path):
+                                    os.mkdir(self.out_matrix_path)
+                                cv2.imwrite(os.path.join(self.out_plot_path, fn_out), mat_matrix)
+                                print(fn_out, 'was wrote in', self.out_plot_path)
                             break
                         # user cropping
                         elif choice.lower()[0] == 'n':
-                            resized_page = cv2.resize(page[0], resize)
+                            resized_page = cv2.resize(doc_page.raster_page, resize)
                             roi = cv2.selectROI('Select the region of interest', resized_page)
-                            mat_matrix = page[0][int(roi[1]*self.__size_factor):int(roi[1]*self.__size_factor) + int(roi[3]*self.__size_factor),\
-                                                 int(roi[0]*self.__size_factor):int(roi[0]*self.__size_factor) + int(roi[2]*self.__size_factor)]
-                            resize_mat_matrix = (int(mat_matrix.shape[1]/self.__size_factor), int(mat_matrix.shape[0]/self.__size_factor))
-                            tmp = cv2.resize(mat_matrix, resize_mat_matrix)
-                            cv2.imshow('Selected materiality matrix', tmp)
-                            cv2.waitKey(0)
 
-                            if not os.path.isdir(self.out_path):
-                                os.mkdir(self.out_path)
+                            if roi[0] != 0 and roi[1] != 0 and roi[2] != 0 and roi[3] != 0:
+                                mat_matrix = doc_page.raster_page[int(roi[1]*self.__size_factor):int(roi[1]*self.__size_factor) + int(roi[3]*self.__size_factor),\
+                                                                int(roi[0]*self.__size_factor):int(roi[0]*self.__size_factor) + int(roi[2]*self.__size_factor)]
+                                resize_mat_matrix = (int(mat_matrix.shape[1]/self.__size_factor), int(mat_matrix.shape[0]/self.__size_factor))
+                                tmp = cv2.resize(mat_matrix, resize_mat_matrix)
+                                cv2.imshow('Selected materiality matrix', tmp)
+                                cv2.waitKey(0)
 
-                            if not os.path.isdir(self.out_img_path):
-                                os.mkdir(self.out_img_path)
+                                if not os.path.isdir(self.out_path):
+                                    os.mkdir(self.out_path)
 
-                            cv2.imwrite(os.path.join(self.out_img_path, fn_out), mat_matrix)
-                            print(fn_out, 'was wrote in', self.out_img_path)
-                            break
+                                if not os.path.isdir(self.out_img_path):
+                                    os.mkdir(self.out_img_path)
+
+                                # if materiality matrix is in the page
+                                # save in the relative folder
+                                if self.lang_dict[self.lang] in doc_page.text.lower():
+                                    if not os.path.isdir(self.out_matrix_path):
+                                        os.mkdir(self.out_matrix_path)
+                                    cv2.imwrite(os.path.join(self.out_matrix_path, fn_out), mat_matrix)
+                                    print(fn_out, 'was wrote in', self.out_matrix_path)
+                                # else save into another directory
+                                else:
+                                    if not os.path.isdir(self.out_plot_path):
+                                        os.mkdir(self.out_matrix_path)
+                                    cv2.imwrite(os.path.join(self.out_plot_path, fn_out), mat_matrix)
+                                    print(fn_out, 'was wrote in', self.out_plot_path)
+                                break
+                            else:
+                                break
                         # invalid choice
                         else:
                             print('Invalid choice!')
