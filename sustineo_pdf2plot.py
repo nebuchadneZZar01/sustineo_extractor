@@ -28,7 +28,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--debug-mode', action='store_true',\
                         help='activate the visualization of the various passes')
 
-    parser.add_argument('-s', '--size-factor', type=float, default=1.5,\
+    parser.add_argument('-s', '--size-factor', type=float, default=4,\
                         help='if used in debug mode, the image sizes will be divided by the choosen\
                             scale factor for a better visualization on lower resolution screens (default=1.5)')
     
