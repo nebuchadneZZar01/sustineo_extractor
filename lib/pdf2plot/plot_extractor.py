@@ -60,6 +60,10 @@ class PDFToImage:
     def doc_pages(self):
         return self.__doc_pages
     
+    @doc_pages.deleter
+    def doc_pages(self):
+        del self.__doc_pages
+    
     @property
     def lang_dict(self):
         return self.__lang_dict
@@ -108,7 +112,7 @@ class PDFToImage:
             im_textless = np.ascontiguousarray(im_textless[..., [2, 1, 0]])
 
             self.__out_img_pages.append((im_text, im_textless, self.__filename, page))
-            doc_page = DocumentPage(self.filename, page, im_text, im_textless, text, 300)         # 300 pixels is a test
+            doc_page = DocumentPage(self.filename, page, im_text, im_textless, text)
             self.doc_pages.append(doc_page)
 
     # calculate y in Hough transform
@@ -218,77 +222,47 @@ class PDFToImage:
                     i_top_left = (rows[0], columns[-1])                                                                 # first x coord, least y coord
                     i_top_right = (rows[-1], columns[-1])                                                               # least x coord, first y coord
 
-                    if self.__debug_mode:
-                        cv2.circle(tmp, i_bottom_left, 6, (0, 255, 0), 3)
-                        cv2.circle(tmp, i_bottom_right, 6, (0, 255, 0), 3)
-                        cv2.circle(tmp, i_top_left, 6, (0, 255, 0), 3)
-                        cv2.circle(tmp, i_top_right, 6, (0, 255, 0), 3)
+                    if doc_page.in_feasible_area(i_bottom_left) and doc_page.in_feasible_area(i_bottom_right) and \
+                        doc_page.in_feasible_area(i_top_left) and doc_page.in_feasible_area(i_top_right):
 
-                        tmp_res = cv2.resize(tmp, resize)
-                        cv2.imshow('Finding materiality matrix', tmp_res)
-                        cv2.waitKey(1500)
+                        if self.__debug_mode:
+                            cv2.circle(tmp, i_bottom_left, 6, (0, 255, 0), 3)
+                            cv2.circle(tmp, i_bottom_right, 6, (0, 255, 0), 3)
+                            cv2.circle(tmp, i_top_left, 6, (0, 255, 0), 3)
+                            cv2.circle(tmp, i_top_right, 6, (0, 255, 0), 3)
 
-                    upper_offset = 200                              # vertical offset
-                    lower_offset = 350
+                            tmp_res = cv2.resize(tmp, resize)
+                            cv2.imshow('Finding materiality matrix', tmp_res)
+                            cv2.waitKey(1500)
 
-                    # final cropped area delimiters
-                    top_left = (0, i_top_left[1] - upper_offset) if (i_top_left[1] - upper_offset > 0) else (0, 0)
-                    bottom_right = (width, i_bottom_right[1] + lower_offset) if (i_bottom_right[1] + lower_offset < height) else (width, height)
+                        upper_offset = 200                              # vertical offset
+                        lower_offset = 350
 
-                    mat_matrix = doc_page.raster_page[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]                      # materiality matrix region
-                    
-                    fn_out = doc_page.filename + '_' + str(doc_page.page_number) + '.png'                                                      # output filename
-                    
-                    tmp = cv2.resize(mat_matrix, (int(mat_matrix.shape[1]/self.__size_factor), int(mat_matrix.shape[0]/self.__size_factor)))
-                    cv2.imshow('Finding materiality matrix', tmp)
+                        # final cropped area delimiters
+                        top_left = (0, i_top_left[1] - upper_offset) if (i_top_left[1] - upper_offset > 0) else (0, 0)
+                        bottom_right = (width, i_bottom_right[1] + lower_offset) if (i_bottom_right[1] + lower_offset < height) else (width, height)
 
-                    cv2.waitKey(0)
-                    cv2.destroyAllWindows()
+                        mat_matrix = doc_page.raster_page[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]                      # materiality matrix region
+                        
+                        fn_out = doc_page.filename + '_' + str(doc_page.page_number) + '.png'                                                      # output filename
+                        
+                        tmp = cv2.resize(mat_matrix, (int(mat_matrix.shape[1]/self.__size_factor), int(mat_matrix.shape[0]/self.__size_factor)))
+                        cv2.imshow('Finding materiality matrix', tmp)
 
-                    # asking user if the cropped region is ok
-                    while True:
-                        choice = input('\nIs this crop ok? [Y/n] ')
-                        # automatic crop is ok
-                        if choice.lower()[0] == 'y':
-                            if not os.path.isdir(self.out_path):
-                                os.mkdir(self.out_path)
+                        cv2.waitKey(0)
+                        cv2.destroyAllWindows()
 
-                            if not os.path.isdir(self.out_img_path):
-                                os.mkdir(self.out_img_path)
-                            
-                            # if materiality matrix is in the page
-                            # save in the relative folder
-                            if self.lang_dict[self.lang] in doc_page.text.lower():
-                                if not os.path.isdir(self.out_matrix_path):
-                                    os.mkdir(self.out_matrix_path)
-                                cv2.imwrite(os.path.join(self.out_matrix_path, fn_out), mat_matrix)
-                                print(fn_out, 'was wrote in', self.out_matrix_path)
-                            # else save into another directory
-                            else:
-                                if not os.path.isdir(self.out_plot_path):
-                                    os.mkdir(self.out_matrix_path)
-                                cv2.imwrite(os.path.join(self.out_plot_path, fn_out), mat_matrix)
-                                print(fn_out, 'was wrote in', self.out_plot_path)
-                            break
-                        # user cropping
-                        elif choice.lower()[0] == 'n':
-                            resized_page = cv2.resize(doc_page.raster_page, resize)
-                            roi = cv2.selectROI('Select the region of interest', resized_page)
-
-                            if roi[0] != 0 and roi[1] != 0 and roi[2] != 0 and roi[3] != 0:
-                                mat_matrix = doc_page.raster_page[int(roi[1]*self.__size_factor):int(roi[1]*self.__size_factor) + int(roi[3]*self.__size_factor),\
-                                                                int(roi[0]*self.__size_factor):int(roi[0]*self.__size_factor) + int(roi[2]*self.__size_factor)]
-                                resize_mat_matrix = (int(mat_matrix.shape[1]/self.__size_factor), int(mat_matrix.shape[0]/self.__size_factor))
-                                tmp = cv2.resize(mat_matrix, resize_mat_matrix)
-                                cv2.imshow('Selected materiality matrix', tmp)
-                                cv2.waitKey(0)
-
+                        # asking user if the cropped region is ok
+                        while True:
+                            choice = input('\nIs this crop ok? [Y/n] ')
+                            # automatic crop is ok
+                            if choice.lower()[0] == 'y':
                                 if not os.path.isdir(self.out_path):
                                     os.mkdir(self.out_path)
 
                                 if not os.path.isdir(self.out_img_path):
                                     os.mkdir(self.out_img_path)
-
+                                
                                 # if materiality matrix is in the page
                                 # save in the relative folder
                                 if self.lang_dict[self.lang] in doc_page.text.lower():
@@ -303,18 +277,56 @@ class PDFToImage:
                                     cv2.imwrite(os.path.join(self.out_plot_path, fn_out), mat_matrix)
                                     print(fn_out, 'was wrote in', self.out_plot_path)
                                 break
+                            # user cropping
+                            elif choice.lower()[0] == 'n':
+                                resized_page = cv2.resize(doc_page.raster_page, resize)
+                                roi = cv2.selectROI('Select the region of interest', resized_page)
+
+                                if roi[0] != 0 and roi[1] != 0 and roi[2] != 0 and roi[3] != 0:
+                                    mat_matrix = doc_page.raster_page[int(roi[1]*self.__size_factor):int(roi[1]*self.__size_factor) + int(roi[3]*self.__size_factor),\
+                                                                    int(roi[0]*self.__size_factor):int(roi[0]*self.__size_factor) + int(roi[2]*self.__size_factor)]
+                                    resize_mat_matrix = (int(mat_matrix.shape[1]/self.__size_factor), int(mat_matrix.shape[0]/self.__size_factor))
+                                    tmp = cv2.resize(mat_matrix, resize_mat_matrix)
+                                    cv2.imshow('Selected materiality matrix', tmp)
+                                    cv2.waitKey(0)
+
+                                    if not os.path.isdir(self.out_path):
+                                        os.mkdir(self.out_path)
+
+                                    if not os.path.isdir(self.out_img_path):
+                                        os.mkdir(self.out_img_path)
+
+                                    # if materiality matrix is in the page
+                                    # save in the relative folder
+                                    if self.lang_dict[self.lang] in doc_page.text.lower():
+                                        if not os.path.isdir(self.out_matrix_path):
+                                            os.mkdir(self.out_matrix_path)
+                                        cv2.imwrite(os.path.join(self.out_matrix_path, fn_out), mat_matrix)
+                                        print(fn_out, 'was wrote in', self.out_matrix_path)
+                                    # else save into another directory
+                                    else:
+                                        if not os.path.isdir(self.out_plot_path):
+                                            os.mkdir(self.out_matrix_path)
+                                        cv2.imwrite(os.path.join(self.out_plot_path, fn_out), mat_matrix)
+                                        print(fn_out, 'was wrote in', self.out_plot_path)
+                                    break
+                                else:
+                                    break
+                            # invalid choice
                             else:
-                                break
-                        # invalid choice
-                        else:
-                            print('Invalid choice!')
-                            continue
+                                print('Invalid choice!')
+                                continue
 
                 except:
                     print('Not-legit intersection found, skipping to next page...')
                     continue
             else:
                 continue
+        
+        # freeing memory in order
+        # to prevent memory leaks
+        del self.__pdf_doc
+        del self.doc_pages
     
     def run(self):
         self.__page_to_img()

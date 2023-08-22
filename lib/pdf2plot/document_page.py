@@ -2,7 +2,7 @@
 # all the useful informations such as raster and 
 # vector page, provenience filename and number 
 class DocumentPage:
-    def __init__(self, filename: str, page_number: int, raster_page, vector_page, page_text, margin_offset):
+    def __init__(self, filename: str, page_number: int, raster_page, vector_page, page_text):
         self.__filename = filename
         self.__raster_page = raster_page
         self.__vector_page = vector_page
@@ -10,7 +10,8 @@ class DocumentPage:
         self.__page_number = page_number
 
         self.__page_size = self.__raster_page.shape[0:2][::-1]
-        self.__margin_offset = margin_offset
+        # defining page margin by 1/12 * Width
+        self.__margin_offset = int(self.__page_size[0]/12)
 
     @property
     def filename(self):
