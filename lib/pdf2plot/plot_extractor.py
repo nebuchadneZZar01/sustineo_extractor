@@ -186,6 +186,7 @@ class PDFToImage:
 
             height, width, _ = doc_page.raster_page.shape
 
+            # detecting lines
             if lines is not None:
                 for rho, theta, in lines[:,0,]:
                     (x1, y1), (x2, y2) = self.__polar_to_xy(rho, theta, width)
@@ -320,6 +321,56 @@ class PDFToImage:
                 except:
                     print('Not-legit intersection found, skipping to next page...')
                     continue
+            else:
+                continue
+
+            # detecting circles
+            circles = cv2.HoughCircles(work_image, cv2.HOUGH_GRADIENT, 1, minDist=150, param1=100, param2=50, minRadius=100, maxRadius=1000)
+            if circles is not None:
+                circles_hough = []
+                for i in circles[0, :]:
+                    center = (int(i[0]), int(i[1]))
+                    # circle outline
+                    radius = int(i[2])
+
+                    circles_hough.append((center, radius))
+                    if self.__debug_mode:
+                        cv2.circle(tmp, center, 1, (0, 100, 100), 3)
+                        cv2.circle(tmp, center, radius, (255, 0, 255), 3)
+                
+                min_x = circles_hough[0][0][0]
+                min_y = circles_hough[0][0][1]
+                max_x = 0
+                max_y = 0
+
+                for circle in circles_hough:
+                    (x_center, y_center) = circle[0]
+
+                    if x_center > max_x:
+                        max_x = x_center
+
+                    if y_center > max_y:
+                        max_y = y_center
+
+                    if x_center < min_x:
+                        min_x = x_center
+
+                    if y_center < min_y:
+                        min_y = y_center
+
+                for circle in circles_hough:
+                    if min_y == circle[0][1]:
+                        y_offset = int(circle[1] * 1.5)
+
+                    if max_x == circle[0][0]:
+                        x_offset = int(circle[1] * 1.5)
+
+                cv2.rectangle(tmp, (min_x - x_offset, min_y - y_offset), (max_x + x_offset, max_y + y_offset), (255, 0, 0), 3)
+
+                tmp_res = cv2.resize(tmp, resize)
+                cv2.imshow('Hough circles', tmp_res)
+                cv2.waitKey(0)
+                pass
             else:
                 continue
         
