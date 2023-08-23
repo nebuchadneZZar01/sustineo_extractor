@@ -169,7 +169,7 @@ class PDFToImage:
 
             if self.__debug_mode:
                 tmp_res = cv2.resize(page_copy, resize)
-                cv2.imshow('Finding materiality matrix', tmp_res)
+                cv2.imshow('Finding interesting plots...', tmp_res)
                 cv2.waitKey(1500)
 
             image_gray = cv2.cvtColor(page_copy, cv2.COLOR_BGR2GRAY)
@@ -201,7 +201,7 @@ class PDFToImage:
 
                 if self.__debug_mode:
                     tmp_res = cv2.resize(tmp, resize)
-                    cv2.imshow('Finding materiality matrix', tmp_res)
+                    cv2.imshow('Finding interesting plots...', tmp_res)
                     cv2.waitKey(1500)
 
                 tups = [(r, c) for r in rows for c in columns]
@@ -211,7 +211,7 @@ class PDFToImage:
                         cv2.circle(tmp, t, 6, (255, 0, 0), 3)
                         tmp_res = cv2.resize(tmp, resize)
 
-                    cv2.imshow('Finding materiality matrix', tmp_res)
+                    cv2.imshow('Finding interesting plots...', tmp_res)
                     cv2.waitKey(1500)
 
                 rows.sort(); columns.sort(reverse=True)
@@ -233,7 +233,7 @@ class PDFToImage:
                             cv2.circle(tmp, i_top_right, 6, (0, 255, 0), 3)
 
                             tmp_res = cv2.resize(tmp, resize)
-                            cv2.imshow('Finding materiality matrix', tmp_res)
+                            cv2.imshow('Finding interesting plots...', tmp_res)
                             cv2.waitKey(1500)
 
                         upper_offset = 200                              # vertical offset
@@ -248,7 +248,7 @@ class PDFToImage:
                         fn_out = doc_page.filename + '_' + str(doc_page.page_number) + '.png'                                                      # output filename
                         
                         tmp = cv2.resize(mat_matrix, (int(mat_matrix.shape[1]/self.__size_factor), int(mat_matrix.shape[0]/self.__size_factor)))
-                        cv2.imshow('Finding materiality matrix', tmp)
+                        cv2.imshow('Found an interesting plot!', tmp)
 
                         cv2.waitKey(0)
                         cv2.destroyAllWindows()
@@ -360,16 +360,30 @@ class PDFToImage:
 
                 for circle in circles_hough:
                     if min_y == circle[0][1]:
-                        y_offset = int(circle[1] * 1.5)
+                        y_offset = int(circle[1] * 1.2)
 
                     if max_x == circle[0][0]:
-                        x_offset = int(circle[1] * 1.5)
+                        x_offset = int(circle[1] * 1.2)
 
-                cv2.rectangle(tmp, (min_x - x_offset, min_y - y_offset), (max_x + x_offset, max_y + y_offset), (255, 0, 0), 3)
+                top_left = (min_x - x_offset, min_y - y_offset)
+                bottom_right = (max_x + x_offset, max_y + y_offset)
 
-                tmp_res = cv2.resize(tmp, resize)
-                cv2.imshow('Hough circles', tmp_res)
+                if self.__debug_mode:
+                    cv2.rectangle(tmp, top_left, bottom_right, (255, 0, 0), 3)
+
+                    tmp_res = cv2.resize(tmp, resize)
+                    cv2.imshow('Finding interesting plots...', tmp_res)
+                    cv2.waitKey(1500)
+
+                interesting_plot = doc_page.raster_page[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]                      # materiality matrix region
+                fn_out = doc_page.filename + '_' + str(doc_page.page_number) + '.png'      
+
+                tmp = cv2.resize(interesting_plot, (int(interesting_plot.shape[1]/self.__size_factor), int(interesting_plot.shape[0]/self.__size_factor)))
+                cv2.imshow('Found an interesting plot!', tmp)     
                 cv2.waitKey(0)
+
+                cv2.imwrite(os.path.join(self.out_plot_path, fn_out), interesting_plot)              
+                print(fn_out, 'was wrote in', self.out_plot_path)
                 pass
             else:
                 continue
