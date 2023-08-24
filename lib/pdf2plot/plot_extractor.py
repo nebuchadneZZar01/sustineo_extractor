@@ -8,6 +8,7 @@ import pytesseract as pt
 import lib.pdf2plot.languages as languages
 
 from lib.pdf2plot.document_page import DocumentPage
+from tqdm import tqdm
 
 DPI = 300                       # image DPI
 ZOOM = DPI/72                   # image zoom
@@ -139,10 +140,9 @@ class PDFToImage:
 
     # crops the image-format page using the Hough transform
     def __img_to_plot(self):
-        for doc_page in self.doc_pages:
-            # doc_page = self.doc_pages[14]
-            print('Processing {file}.pdf page {pg}...'.format(file = doc_page.filename, pg = doc_page.page_number))
-
+        pbar = tqdm(self.doc_pages)
+        pbar.set_description(f'{self.doc_pages[0].filename}.pdf')
+        for doc_page in pbar:
             page_copy = doc_page.vector_page.copy()
             page_gray = cv2.cvtColor(page_copy, cv2.COLOR_BGR2GRAY)
             thresh = cv2.threshold(page_gray, 180, 255, cv2.THRESH_BINARY)[1]
