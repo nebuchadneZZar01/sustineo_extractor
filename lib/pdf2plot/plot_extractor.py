@@ -140,6 +140,7 @@ class PDFToImage:
     # crops the image-format page using the Hough transform
     def __img_to_plot(self):
         for doc_page in self.doc_pages:
+            # doc_page = self.doc_pages[14]
             print('Processing {file}.pdf page {pg}...'.format(file = doc_page.filename, pg = doc_page.page_number))
 
             page_copy = doc_page.vector_page.copy()
@@ -177,6 +178,7 @@ class PDFToImage:
 
             edges = cv2.Canny(work_image, 50, 150, apertureSize=3)
             lines = cv2.HoughLines(edges, 1, math.pi/180, 700)
+            circles = cv2.HoughCircles(work_image, cv2.HOUGH_GRADIENT, 1, minDist=150, param1=100, param2=51, minRadius=100, maxRadius=1000)
 
             rows = []
             columns = []
@@ -187,7 +189,7 @@ class PDFToImage:
             height, width, _ = doc_page.raster_page.shape
 
             # detecting lines
-            if lines is not None:
+            if lines is not None and circles is None:
                 for rho, theta, in lines[:,0,]:
                     (x1, y1), (x2, y2) = self.__polar_to_xy(rho, theta, width)
 
@@ -218,10 +220,21 @@ class PDFToImage:
 
                 try:
                     # intersection delimiter points
-                    i_bottom_left = (rows[0], columns[0])                                                               # first x coord, first y coord
-                    i_bottom_right = (rows[-1], columns[0])                                                             # least x coord, first y coord
-                    i_top_left = (rows[0], columns[-1])                                                                 # first x coord, least y coord
-                    i_top_right = (rows[-1], columns[-1])                                                               # least x coord, first y coord
+                    if len(rows) == 0:
+                        i_bottom_left = (0, columns[0])                                                               # limit x, first y coord
+                        i_bottom_right = (work_image.shape[1], columns[0])                                            # origin x, first y coord
+                        i_top_left = (0, columns[-1])                                                                 # limit x, least y coord
+                        i_top_right = (work_image.shape[1], columns[-1])    
+                    elif len(columns) == 0:
+                        i_bottom_left = (rows[0], work_image.shape[0])                                                # first x coord, limit y
+                        i_bottom_right = (rows[-1], work_image.shape[0])                                              # least x coord, origin y
+                        i_top_left = (rows[0], 0)                                                                     # first x coord, origin y
+                        i_top_right = (rows[-1], 0)  
+                    else:
+                        i_bottom_left = (rows[0], columns[0])                                                               # first x coord, first y coord
+                        i_bottom_right = (rows[-1], columns[0])                                                             # least x coord, first y coord
+                        i_top_left = (rows[0], columns[-1])                                                                 # first x coord, least y coord
+                        i_top_right = (rows[-1], columns[-1])                                                               # least x coord, first y coord
 
                     if doc_page.in_feasible_area(i_bottom_left) and doc_page.in_feasible_area(i_bottom_right) and \
                         doc_page.in_feasible_area(i_top_left) and doc_page.in_feasible_area(i_top_right):
@@ -243,11 +256,11 @@ class PDFToImage:
                         top_left = (0, i_top_left[1] - upper_offset) if (i_top_left[1] - upper_offset > 0) else (0, 0)
                         bottom_right = (width, i_bottom_right[1] + lower_offset) if (i_bottom_right[1] + lower_offset < height) else (width, height)
 
-                        mat_matrix = doc_page.raster_page[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]                      # materiality matrix region
+                        interesting_plot = doc_page.raster_page[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]                      # interesting plot region
                         
                         fn_out = doc_page.filename + '_' + str(doc_page.page_number) + '.png'                                                      # output filename
                         
-                        tmp = cv2.resize(mat_matrix, (int(mat_matrix.shape[1]/self.__size_factor), int(mat_matrix.shape[0]/self.__size_factor)))
+                        tmp = cv2.resize(interesting_plot, (int(interesting_plot.shape[1]/self.__size_factor), int(interesting_plot.shape[0]/self.__size_factor)))
                         cv2.imshow('Found an interesting plot!', tmp)
 
                         cv2.waitKey(0)
@@ -264,18 +277,18 @@ class PDFToImage:
                                 if not os.path.isdir(self.out_img_path):
                                     os.mkdir(self.out_img_path)
                                 
-                                # if materiality matrix is in the page
+                                # if interesting plot is in the page
                                 # save in the relative folder
                                 if self.lang_dict[self.lang] in doc_page.text.lower():
                                     if not os.path.isdir(self.out_matrix_path):
                                         os.mkdir(self.out_matrix_path)
-                                    cv2.imwrite(os.path.join(self.out_matrix_path, fn_out), mat_matrix)
+                                    cv2.imwrite(os.path.join(self.out_matrix_path, fn_out), interesting_plot)
                                     print(fn_out, 'was wrote in', self.out_matrix_path)
                                 # else save into another directory
                                 else:
                                     if not os.path.isdir(self.out_plot_path):
                                         os.mkdir(self.out_matrix_path)
-                                    cv2.imwrite(os.path.join(self.out_plot_path, fn_out), mat_matrix)
+                                    cv2.imwrite(os.path.join(self.out_plot_path, fn_out), interesting_plot)
                                     print(fn_out, 'was wrote in', self.out_plot_path)
                                 break
                             # user cropping
@@ -284,11 +297,11 @@ class PDFToImage:
                                 roi = cv2.selectROI('Select the region of interest', resized_page)
 
                                 if roi[0] != 0 and roi[1] != 0 and roi[2] != 0 and roi[3] != 0:
-                                    mat_matrix = doc_page.raster_page[int(roi[1]*self.__size_factor):int(roi[1]*self.__size_factor) + int(roi[3]*self.__size_factor),\
+                                    interesting_plot = doc_page.raster_page[int(roi[1]*self.__size_factor):int(roi[1]*self.__size_factor) + int(roi[3]*self.__size_factor),\
                                                                     int(roi[0]*self.__size_factor):int(roi[0]*self.__size_factor) + int(roi[2]*self.__size_factor)]
-                                    resize_mat_matrix = (int(mat_matrix.shape[1]/self.__size_factor), int(mat_matrix.shape[0]/self.__size_factor))
-                                    tmp = cv2.resize(mat_matrix, resize_mat_matrix)
-                                    cv2.imshow('Selected materiality matrix', tmp)
+                                    resize_interesting_plot = (int(interesting_plot.shape[1]/self.__size_factor), int(interesting_plot.shape[0]/self.__size_factor))
+                                    tmp = cv2.resize(interesting_plot, resize_interesting_plot)
+                                    cv2.imshow('Selected interesting plot', tmp)
                                     cv2.waitKey(0)
 
                                     if not os.path.isdir(self.out_path):
@@ -297,18 +310,18 @@ class PDFToImage:
                                     if not os.path.isdir(self.out_img_path):
                                         os.mkdir(self.out_img_path)
 
-                                    # if materiality matrix is in the page
+                                    # if interesting plot is in the page
                                     # save in the relative folder
                                     if self.lang_dict[self.lang] in doc_page.text.lower():
                                         if not os.path.isdir(self.out_matrix_path):
                                             os.mkdir(self.out_matrix_path)
-                                        cv2.imwrite(os.path.join(self.out_matrix_path, fn_out), mat_matrix)
+                                        cv2.imwrite(os.path.join(self.out_matrix_path, fn_out), interesting_plot)
                                         print(fn_out, 'was wrote in', self.out_matrix_path)
                                     # else save into another directory
                                     else:
                                         if not os.path.isdir(self.out_plot_path):
                                             os.mkdir(self.out_matrix_path)
-                                        cv2.imwrite(os.path.join(self.out_plot_path, fn_out), mat_matrix)
+                                        cv2.imwrite(os.path.join(self.out_plot_path, fn_out), interesting_plot)
                                         print(fn_out, 'was wrote in', self.out_plot_path)
                                     break
                                 else:
@@ -321,12 +334,8 @@ class PDFToImage:
                 except:
                     print('Not-legit intersection found, skipping to next page...')
                     continue
-            else:
-                continue
-
             # detecting circles
-            circles = cv2.HoughCircles(work_image, cv2.HOUGH_GRADIENT, 1, minDist=150, param1=100, param2=50, minRadius=100, maxRadius=1000)
-            if circles is not None:
+            elif circles is not None:
                 circles_hough = []
                 for i in circles[0, :]:
                     center = (int(i[0]), int(i[1]))
@@ -360,13 +369,31 @@ class PDFToImage:
 
                 for circle in circles_hough:
                     if min_y == circle[0][1]:
-                        y_offset = int(circle[1] * 1.2)
+                        y_offset = int(circle[1] * 1.25)
 
                     if max_x == circle[0][0]:
-                        x_offset = int(circle[1] * 1.2)
+                        x_offset = int(circle[1] * 1.25)
 
-                top_left = (min_x - x_offset, min_y - y_offset)
-                bottom_right = (max_x + x_offset, max_y + y_offset)
+                top_x = min_x - x_offset
+                top_y = min_y - y_offset
+
+                bottom_x = max_x + x_offset
+                bottom_y = max_y + y_offset
+
+                if top_x < 0:
+                    top_x = 0
+
+                if top_y < 0:
+                    top_y = 0
+
+                if bottom_x > work_image.shape[1]:
+                    bottom_x = work_image.shape[1]
+
+                if bottom_y > work_image.shape[0]:
+                    bottom_y = work_image.shape[0]
+
+                top_left = (top_x, top_y)
+                bottom_right = (bottom_x, bottom_y)
 
                 if self.__debug_mode:
                     cv2.rectangle(tmp, top_left, bottom_right, (255, 0, 0), 3)
@@ -375,7 +402,7 @@ class PDFToImage:
                     cv2.imshow('Finding interesting plots...', tmp_res)
                     cv2.waitKey(1500)
 
-                interesting_plot = doc_page.raster_page[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]                      # materiality matrix region
+                interesting_plot = doc_page.raster_page[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]                      # interesting plot region
                 fn_out = doc_page.filename + '_' + str(doc_page.page_number) + '.png'      
 
                 tmp = cv2.resize(interesting_plot, (int(interesting_plot.shape[1]/self.__size_factor), int(interesting_plot.shape[0]/self.__size_factor)))
