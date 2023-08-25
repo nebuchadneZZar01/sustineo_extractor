@@ -6,11 +6,12 @@ import numpy as np
 import pandas as pd
 import pytesseract as pt
 import lib.pdf2plot.languages as languages
+import gc
 
 from lib.pdf2plot.document_page import DocumentPage
 from tqdm import tqdm
 
-DPI = 300                       # image DPI
+DPI = 250                       # image DPI
 ZOOM = DPI/72                   # image zoom
 
 class PDFToImage:
@@ -19,15 +20,13 @@ class PDFToImage:
         self.__filename = os.path.basename(self.__path)[:-4]
 
         self.__pdf_doc = fitz.open(path)
-        self.__out_path = os.path.join(os.getcwd(), 'out')
-        self.__out_img_path = os.path.join(os.getcwd(), 'out', 'img')
+        self.__out_path = os.path.join(os.getcwd(), 'out', self.__filename)
 
-        self.__out_plot_path = os.path.join(self.__out_img_path, 'plot')
-        self.__out_matrix_path = os.path.join(self.__out_img_path, 'm_matrix')
+        self.__out_plot_path = os.path.join(self.__out_path, 'img', 'plot')
+        self.__out_matrix_path = os.path.join(self.__out_path, 'img', 'm_matrix')
 
         self.__magnify = fitz.Matrix(ZOOM, ZOOM)
-
-        self.__out_img_pages = []
+        
         self.__doc_pages = []
 
         self.__lang_dict = languages.LANGUAGE_DICT
@@ -74,7 +73,9 @@ class PDFToImage:
         return self.__lang
 
     def __page_to_img(self):
-        for page in range(self.__pdf_doc.page_count):
+        pbar = tqdm(range(self.__pdf_doc.page_count))
+        pbar.set_description('Loading PDF')
+        for page in pbar:
             text = self.__pdf_doc[page].get_text()
             
             # getting the text-image
@@ -110,10 +111,10 @@ class PDFToImage:
             pix_textless = page_textless.get_pixmap(matrix=self.__magnify)
             pix_textless.set_dpi(DPI, DPI)
             im_textless = np.frombuffer(pix_textless.samples, dtype=np.uint8).reshape(pix_textless.h, pix_textless.w, pix_textless.n)
-            im_textless = np.ascontiguousarray(im_textless[..., [2, 1, 0]])
+            im_textless = im_textless[..., [2, 1, 0]].copy()
 
-            self.__out_img_pages.append((im_text, im_textless, self.__filename, page))
             doc_page = DocumentPage(self.filename, page, im_text, im_textless, text)
+
             self.doc_pages.append(doc_page)
 
     # calculate y in Hough transform
@@ -140,8 +141,8 @@ class PDFToImage:
 
     # crops the image-format page using the Hough transform
     def __img_to_plot(self):
-        pbar = tqdm(self.doc_pages)
-        pbar.set_description(f'{self.doc_pages[0].filename}.pdf')
+        pbar = tqdm(self.doc_pages)                                                             # progress bar
+        pbar.set_description('Extracting plots')
         for doc_page in pbar:
             page_copy = doc_page.vector_page.copy()
             page_gray = cv2.cvtColor(page_copy, cv2.COLOR_BGR2GRAY)
@@ -187,6 +188,7 @@ class PDFToImage:
                 tmp = doc_page.raster_page.copy()
 
             height, width, _ = doc_page.raster_page.shape
+            fn_out = f'page_{doc_page.page_number}.png'                                                      # output filename
 
             # detecting lines
             if lines is not None and circles is None:
@@ -249,17 +251,15 @@ class PDFToImage:
                             cv2.imshow('Finding interesting plots...', tmp_res)
                             cv2.waitKey(1500)
 
-                        upper_offset = 200                              # vertical offset
-                        lower_offset = 350
+                        upper_offset = 350                              # vertical offset
+                        lower_offset = 300
 
                         # final cropped area delimiters
                         top_left = (0, i_top_left[1] - upper_offset) if (i_top_left[1] - upper_offset > 0) else (0, 0)
                         bottom_right = (width, i_bottom_right[1] + lower_offset) if (i_bottom_right[1] + lower_offset < height) else (width, height)
 
                         interesting_plot = doc_page.raster_page[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]                      # interesting plot region
-                        
-                        fn_out = doc_page.filename + '_' + str(doc_page.page_number) + '.png'                                                      # output filename
-                        
+                                                
                         tmp = cv2.resize(interesting_plot, (int(interesting_plot.shape[1]/self.__size_factor), int(interesting_plot.shape[0]/self.__size_factor)))
                         cv2.imshow('Found an interesting plot!', tmp)
 
@@ -272,24 +272,21 @@ class PDFToImage:
                             # automatic crop is ok
                             if choice.lower()[0] == 'y':
                                 if not os.path.isdir(self.out_path):
-                                    os.mkdir(self.out_path)
-
-                                if not os.path.isdir(self.out_img_path):
-                                    os.mkdir(self.out_img_path)
+                                    os.makedirs(self.out_path)
                                 
                                 # if interesting plot is in the page
                                 # save in the relative folder
                                 if self.lang_dict[self.lang] in doc_page.text.lower():
                                     if not os.path.isdir(self.out_matrix_path):
-                                        os.mkdir(self.out_matrix_path)
+                                        os.makedirs(self.out_matrix_path)
                                     cv2.imwrite(os.path.join(self.out_matrix_path, fn_out), interesting_plot)
-                                    print(fn_out, 'was wrote in', self.out_matrix_path)
+                                    # print(fn_out, 'was wrote in', self.out_matrix_path)
                                 # else save into another directory
                                 else:
                                     if not os.path.isdir(self.out_plot_path):
-                                        os.mkdir(self.out_matrix_path)
+                                        os.makedirs(self.out_matrix_path)
                                     cv2.imwrite(os.path.join(self.out_plot_path, fn_out), interesting_plot)
-                                    print(fn_out, 'was wrote in', self.out_plot_path)
+                                    # print(fn_out, 'was wrote in', self.out_plot_path)
                                 break
                             # user cropping
                             elif choice.lower()[0] == 'n':
@@ -305,24 +302,21 @@ class PDFToImage:
                                     cv2.waitKey(0)
 
                                     if not os.path.isdir(self.out_path):
-                                        os.mkdir(self.out_path)
-
-                                    if not os.path.isdir(self.out_img_path):
-                                        os.mkdir(self.out_img_path)
+                                        os.makedirs(self.out_path)
 
                                     # if interesting plot is in the page
                                     # save in the relative folder
                                     if self.lang_dict[self.lang] in doc_page.text.lower():
                                         if not os.path.isdir(self.out_matrix_path):
-                                            os.mkdir(self.out_matrix_path)
+                                            os.makedirs(self.out_matrix_path)
                                         cv2.imwrite(os.path.join(self.out_matrix_path, fn_out), interesting_plot)
-                                        print(fn_out, 'was wrote in', self.out_matrix_path)
+                                        # print(fn_out, 'was wrote in', self.out_matrix_path)
                                     # else save into another directory
                                     else:
                                         if not os.path.isdir(self.out_plot_path):
-                                            os.mkdir(self.out_matrix_path)
+                                            os.makedirs(self.out_plot_path)
                                         cv2.imwrite(os.path.join(self.out_plot_path, fn_out), interesting_plot)
-                                        print(fn_out, 'was wrote in', self.out_plot_path)
+                                        # print(fn_out, 'was wrote in', self.out_plot_path)
                                     break
                                 else:
                                     break
@@ -403,23 +397,29 @@ class PDFToImage:
                     cv2.waitKey(1500)
 
                 interesting_plot = doc_page.raster_page[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]                      # interesting plot region
-                fn_out = doc_page.filename + '_' + str(doc_page.page_number) + '.png'      
 
                 tmp = cv2.resize(interesting_plot, (int(interesting_plot.shape[1]/self.__size_factor), int(interesting_plot.shape[0]/self.__size_factor)))
                 cv2.imshow('Found an interesting plot!', tmp)     
-                cv2.waitKey(0)
+                cv2.waitKey(1500)
+                cv2.destroyAllWindows()
+
+                if not os.path.isdir(self.out_path):
+                    os.makedirs(self.out_path)
+
+                if not os.path.isdir(self.out_plot_path):
+                    os.makedirs(self.out_plot_path)
 
                 cv2.imwrite(os.path.join(self.out_plot_path, fn_out), interesting_plot)              
-                print(fn_out, 'was wrote in', self.out_plot_path)
-                pass
+                # print(fn_out, 'was wrote in', self.out_plot_path)
             else:
                 continue
-        
-        # freeing memory in order
-        # to prevent memory leaks
-        del self.__pdf_doc
-        del self.doc_pages
     
     def run(self):
         self.__page_to_img()
         self.__img_to_plot()
+
+        # freeing memory in order
+        # to prevent memory leaks
+        del self.__pdf_doc
+        del self.doc_pages
+        gc.collect()
