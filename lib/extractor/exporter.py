@@ -5,12 +5,20 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.patches import Patch
 
+from os.path import dirname as up
+
 class Exporter:
-    def __init__(self, image_fn = str, plot_data = list, legend_data = list):
-        self.__image_path = image_fn
-        self.__image_basename = os.path.basename(image_fn)
+    def __init__(self, path: str, plot_data: list, legend_data: list):
+        self.__path = path
+        self.__pdf_doc_name = up(up(up(self.__path)))[4::]
+        self.__img_extension = os.path.basename(self.__path)[-3:len(self.__path)]
+        self.__filename = os.path.basename(path)[:-4]
         self.__plot_data = plot_data                            # data extracted using PlotOCR class
         self.__legend_data = legend_data                        # data extracted using PlotOCR class
+
+        self.__out_path = os.path.join(os.getcwd(), 'out', self.__pdf_doc_name)
+        self.__csv_path = os.path.join(self.__out_path, 'csv')
+        self.__open_matrix_path = os.path.join(self.__out_path, 'o_matrix')
 
         self.__dataframe = None
 
@@ -25,6 +33,26 @@ class Exporter:
     @property
     def dataframe(self):
         return self.__dataframe
+    
+    @property
+    def pdf_doc_name(self):
+        return self.__dataframe
+    
+    @property
+    def csv_path(self):
+        return self.__csv_path
+    
+    @property
+    def open_matrix_path(self):
+        return self.__open_matrix_path
+    
+    @property
+    def img_extension(self):
+        return self.__img_extension
+    
+    @property
+    def filename(self):
+        return self.__filename
 
     # renormalizes x-axis of data extracted by plot
     def __renormalize_x_group(self, value, norm_min, norm_max):
@@ -144,19 +172,13 @@ class Exporter:
 
     # exports csv format dataset
     def __export_dataset(self):
-        img_extension = self.__image_basename[-3:len(self.__image_basename)]
+        if not os.path.isdir(self.csv_path):
+            os.makedirs(self.csv_path)
 
-        out_dir = os.path.join('out', 'csv')
-        print(out_dir)
-
-        if not os.path.isdir(out_dir):
-            os.mkdir(out_dir)
-
-        csv_fn = self.__image_basename.replace(img_extension, 'csv').replace('src/', '')
-        out_path = os.path.join(out_dir, csv_fn)
+        out_path = os.path.join(self.csv_path, f'{self.filename}.csv')
 
         self.__dataframe.to_csv(out_path)
-        print('\nExtracted data was exported to {fn}'.format(fn = out_path))
+        print(f'\nExtracted data was exported to {out_path}')
 
     def compose_export_dataset(self):
         self.__compose_dataset()
@@ -228,17 +250,12 @@ class Exporter:
         fig.tight_layout()
 
         # EXPORTATION SECTION
-        img_extension = self.__image_basename[-3:len(self.__image_basename)]
+        if not os.path.isdir(self.open_matrix_path):
+            os.makedirs(self.open_matrix_path)
 
-        out_dir = os.path.join('out', 'plot')
-
-        if not os.path.isdir(out_dir):
-            os.mkdir(out_dir)
-
-        img_fn = self.__image_basename.replace(img_extension, 'png').replace('src/', '')
-        out_path = os.path.join(out_dir, img_fn)
+        out_path = os.path.join(self.open_matrix_path, f'{self.filename}.png')
 
         plt.savefig(out_path)
         plt.show()
 
-        print('Converted image was exported to {fn}\n'.format(fn = out_path))
+        print(f'Converted image was exported to {out_path}\n')
