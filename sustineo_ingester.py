@@ -1,10 +1,11 @@
 import os
-from elasticsearch import Elasticsearch, helpers
 import configparser
 import pandas as pd
 import json
 
+from elasticsearch import Elasticsearch, helpers
 from tqdm import tqdm
+from simple_file_checksum import get_checksum 
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -26,6 +27,7 @@ def main():
             for matrix in os.listdir(matrix_dir):
                 df = pd.read_csv(os.path.join(matrix_dir, matrix))
                 json_str = df.to_json(orient='records')
+                # sha_512 = get_checksum(os.path.join(matrix_dir, matrix), algorithm='SHA512')
 
                 # csv files cannot be ingested
                 # we have to map in a json file
@@ -35,6 +37,7 @@ def main():
                 for row in json_records:
                     record = {
                         '_op_type': 'index',
+                        # '_id': sha_512,
                         '_index': 'sustineo_matrix',
                         '_source': row
                     }
@@ -47,12 +50,14 @@ def main():
             for table in os.listdir(table_dir):
                 df = pd.read_csv(os.path.join(table_dir, table)) 
                 json_str = df.to_json(orient='records')
+                # sha_512 = get_checksum(os.path.join(matrix_dir, matrix), algorithm='SHA512')
 
                 json_records = json.loads(json_str)
                 action_list = []
                 for row in json_records:
                     record = {
-                        '_op_type': 'index',
+                        '_op_type': 'create',
+                        # '_id': sha_512,
                         '_index': 'sustineo_table',
                         '_source': row
                     }
