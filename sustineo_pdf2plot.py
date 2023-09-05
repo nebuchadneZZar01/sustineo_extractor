@@ -50,12 +50,16 @@ if __name__ == '__main__':
 
     parser.add_argument('-s', '--size-factor', type=float, default=3,\
                         help='if used in debug mode, the image sizes will be divided by the choosen\
-                            scale factor for a better visualization on lower resolution screens (default=1.5)')
+                            scale factor for a better visualization on lower resolution screens (default=3)')
     
     args = parser.parse_args()
 
     if os.path.isfile(args.pathname):
-        main(args.pathname, args.language, args.debug_mode, args.size_factor)
+        if args.pathname[:-3].lower != 'pdf':
+            print(f'{args.pathname} is not a PDF file\nPlease choose a PDF file')
+            exit()
+        else:
+            main(args.pathname, args.language, args.debug_mode, args.size_factor)
     else:
         if os.path.isdir(args.pathname):
             n_files = len(os.listdir(args.pathname))
@@ -64,4 +68,4 @@ if __name__ == '__main__':
                 print(f'Extracting data from file {i+1} of {n_files}...\n')
                 main(complete_fn, args.language, args.debug_mode, args.size_factor)
         else:
-            print('ERROR: File {fn} does not exist'.format(fn = args.pathname))
+            print(f'ERROR: File {args.pathname} does not exist')

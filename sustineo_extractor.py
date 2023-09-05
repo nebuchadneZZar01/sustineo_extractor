@@ -60,13 +60,16 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--debug-mode', action='store_true',\
                         help='activate the visualization of the various passes')
 
-    parser.add_argument('-s', '--size-factor', type=float, default=1.5,\
+    parser.add_argument('-s', '--size-factor', type=float, default=3,\
                         help='if used in debug mode, the image sizes will be divided by the choosen\
-                            scale factor for a better visualization on lower resolution screens (default=1.5)')
+                            scale factor for a better visualization on lower resolution screens (default=3)')
 
     args = parser.parse_args()
 
     if os.path.isfile(args.pathname):
+        if args.pathname[-3::].lower != 'jpg' or args.pathname[-3::].lower != 'png' or args.pathname[-3::].lower != 'bmp':
+            print(f'{args.pathname} is not an image file\nPlease choose a correct image format file')
+            exit()
         # takes in input file
         main(args.pathname, args.language, args.type, args.size_factor, args.debug_mode)
         print('Extraction completed!')
@@ -76,12 +79,12 @@ if __name__ == '__main__':
             n_files = len(os.listdir(args.pathname))
             for i, fn in enumerate(os.listdir(args.pathname)):
                 complete_fn = os.path.join(args.pathname, fn)
-                print('Extracting file {n} of {n_files}...\n'.format(n = i+1, n_files = n_files))
+                print(f'Extracting file {i+1} of {n_files}...\n')
                 try:
                     main(complete_fn, args.language, args.type, args.size_factor, args.debug_mode)
                 except:
-                    print('There was an error extracting data from file {fn}!'.format(fn = args.pathname))
+                    print(f'There was an error extracting data from file {args.pathname}!')
                     continue
             print('Extraction completed!')
         else:
-            print('ERROR: File {fn} does not exist'.format(fn = args.filename))
+            print(f'ERROR: File {args.filename} does not exist')
