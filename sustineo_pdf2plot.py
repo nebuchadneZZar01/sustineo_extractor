@@ -14,11 +14,8 @@ def main(pdf_path, language, debug, size_factor):
     filename = os.path.basename(pdf_path)[:-4]
     out_plot_path = os.path.join('out', filename, 'img', 'plot')
     out_matrix_path = os.path.join('out', filename, 'img', 'm_matrix')
-    out_table_path = os.path.join('out', filename, 'table')
-
-    cnt_plots = 0
-    cnt_matrices = 0
-    cnt_tables = 0
+    out_gri_table_path = os.path.join('out', filename, 'table', 'gri')
+    out_other_table_path = os.path.join('out', filename, 'table', 'other')
 
     if os.path.isdir(out_plot_path):
         cnt_plots = len(os.listdir(out_plot_path))
@@ -26,12 +23,16 @@ def main(pdf_path, language, debug, size_factor):
     if os.path.isdir(out_matrix_path):
         cnt_matrices = len(os.listdir(out_matrix_path))
     
-    if os.path.isdir(out_table_path):
-        cnt_tables = len(os.listdir(out_table_path))
+    if os.path.isdir(out_gri_table_path):
+        cnt_gri_tables = len(os.listdir(out_gri_table_path))
+
+    if os.path.isdir(out_other_table_path):
+        cnt_other_tables = len(os.listdir(out_other_table_path))
 
     print(f'{cnt_plots} plots were extracted in {out_plot_path}')
     print(f'{cnt_matrices} materiality matrices were extracted in {out_matrix_path}')
-    print(f'{cnt_tables} tables were extracted in {out_table_path}\n')
+    print(f'{cnt_gri_tables} gri tables were extracted in {out_gri_table_path}')
+    print(f'{cnt_other_tables} other tables were extracted in {out_other_table_path}\n')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='sustineo_pdf2plot',
