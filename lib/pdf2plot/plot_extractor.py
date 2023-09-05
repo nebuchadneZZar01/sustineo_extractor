@@ -190,6 +190,12 @@ class PDFToImage:
             height, width, _ = doc_page.raster_page.shape
             fn_out = f'page_{doc_page.page_number}.png'                                                      # output filename
 
+            # detecting if materiality matrix or not
+            if self.lang_dict[self.lang] in doc_page.text.lower():
+                final_path = self.out_matrix_path
+            else:
+                final_path = self.out_plot_path
+
             # detecting lines
             if lines is not None and circles is None:
                 for rho, theta, in lines[:,0,]:
@@ -301,22 +307,9 @@ class PDFToImage:
                                     cv2.imshow('Selected interesting plot', tmp)
                                     cv2.waitKey(0)
 
-                                    if not os.path.isdir(self.out_path):
-                                        os.makedirs(self.out_path)
-
-                                    # if interesting plot is in the page
-                                    # save in the relative folder
-                                    if self.lang_dict[self.lang] in doc_page.text.lower():
-                                        if not os.path.isdir(self.out_matrix_path):
-                                            os.makedirs(self.out_matrix_path)
-                                        cv2.imwrite(os.path.join(self.out_matrix_path, fn_out), interesting_plot)
-                                        # print(fn_out, 'was wrote in', self.out_matrix_path)
-                                    # else save into another directory
-                                    else:
-                                        if not os.path.isdir(self.out_plot_path):
-                                            os.makedirs(self.out_plot_path)
-                                        cv2.imwrite(os.path.join(self.out_plot_path, fn_out), interesting_plot)
-                                        # print(fn_out, 'was wrote in', self.out_plot_path)
+                                    if not os.path.isdir(final_path):
+                                        os.makedirs(final_path)
+                                    cv2.imwrite(os.path.join(final_path, fn_out), interesting_plot)
                                     break
                                 else:
                                     break
@@ -403,14 +396,9 @@ class PDFToImage:
                 cv2.waitKey(1500)
                 cv2.destroyAllWindows()
 
-                if not os.path.isdir(self.out_path):
-                    os.makedirs(self.out_path)
-
-                if not os.path.isdir(self.out_plot_path):
-                    os.makedirs(self.out_plot_path)
-
-                cv2.imwrite(os.path.join(self.out_plot_path, fn_out), interesting_plot)              
-                # print(fn_out, 'was wrote in', self.out_plot_path)
+                if not os.path.isdir(final_path):
+                    os.makedirs(final_path)
+                cv2.imwrite(os.path.join(final_path, fn_out), interesting_plot)
             else:
                 continue
     
