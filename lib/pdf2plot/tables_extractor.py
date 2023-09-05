@@ -1,7 +1,6 @@
 import os
 import pdfplumber
 import pandas as pd
-import matplotlib.pyplot as plt
 
 from tqdm import tqdm
 
@@ -13,7 +12,10 @@ class TableToCSV:
         self.__pdf_doc = pdfplumber.open(self.__path)
 
         self.__out_path = os.path.join(os.getcwd(), 'out', self.__filename)
+
+        # gri tables location
         self.__out_gri_table_path = os.path.join(self.__out_path, 'table', 'gri')
+        # other type tables location
         self.__out_other_table_path = os.path.join(self.__out_path, 'table', 'other')
 
     @property
