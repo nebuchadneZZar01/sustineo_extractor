@@ -340,14 +340,12 @@ class PlotOCR_Box(PlotOCR):
 				if control:
 					self.labelboxes.remove(lb)
 
-		print('Labels extracted: {N}\n'.format(N = len(self.labelboxes)))
+		print(f'Labels extracted: {len(self.labelboxes)}\n')
 
 		for lb in self.labelboxes:
-			print('Position: ({x},{y})\nText: {label}\nLabel length: {l}\nValue: {center}\n'.format(x = lb.position[0],\
-																								y = lb.position[1],\
-																								label = lb.label,
-																								l = len(lb.label),
-																								center = lb.center))
+			print(f'Position: ({lb.position[0]},{lb.position[1]})\n\
+		 			Text: {lb.label}\nLabel length: {len(lb.label)}\n\
+					Value: {lb.center}\n')
 			if self.debug_mode:
 				cv2.circle(self.image_debug, lb.center, 5, (0, 0, 255), 5)
 
@@ -589,16 +587,14 @@ class PlotOCR_Blob(PlotOCR):
 			if len(bb.label) <= 1:
 				self.__blobboxes.remove(bb)
 
-		print('Labels extracted: {N}\n'.format(N = len(self.__blobboxes)))
+		print(f'Labels extracted: {len(self.__blobboxes)}\n')
 		image_hsv = cv2.cvtColor(self.image_original, cv2.COLOR_BGR2HSV)
 
 		for bb in self.__blobboxes:
 			bb.color_rgb = (self.image_original[bb.position[1], bb.position[0]])
 			bb.color_hsv = (image_hsv[bb.position[1], bb.position[0]])
-			print('Position: ({x},{y})\nText: {label}\nLabel length: {l}\n'.format(x = bb.position[0],\
-																								y = bb.position[1],\
-																								label = bb.label,
-																								l = len(bb.label)))
+			print(f'Position: ({bb.position[0]},{bb.position[1]})\n\
+		 			Text: {bb.label}\nLabel length: {len(bb.label)}\n')
 			if self.debug_mode:
 				cv2.circle(self.image_debug, bb.position, 5, (0, 0, 255), 5)
 
@@ -765,7 +761,7 @@ class LegendOCR(OCR):
 			
 			print("Extracted labels from legend:")
 			for lb in self.__legendboxes:
-				print("label: {l}\ncolor: {c}\n".format(l = lb.label, c = lb.color))
+				print(f"label: {lb.label}\ncolor: {lb.color}\n")
 		else:
 			self.__legendboxes = None
 

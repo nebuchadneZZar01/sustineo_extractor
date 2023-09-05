@@ -304,7 +304,7 @@ class BlobCropper:
                 if (curr_count > x_count):
                     x_count = curr_count
                     num_x = x
-            print('Most freq x: {x} \t - \t Frequency: {cnt}'.format(x=num_x, cnt=x_count))
+            print(f'Most freq x: {num_x} \t - \t Frequency: {x_count}')
 
         # counting the most frequent element
         # on y-axis
@@ -316,7 +316,7 @@ class BlobCropper:
                 if (curr_count > y_count):
                     y_count = curr_count
                     num_y = y
-            print('Most freq y: {y} \t - \t Frequency: {cnt}\n'.format(y=num_y, cnt=y_count))
+            print(f'Most freq y: {num_y} \t - \t Frequency: {y_count}\n')
 
         if x_count > 2 or y_count > 2:
             x_axis = False
