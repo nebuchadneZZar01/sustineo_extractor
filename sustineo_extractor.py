@@ -67,12 +67,15 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if os.path.isfile(args.pathname):
-        if args.pathname[-3::].lower != 'jpg' or args.pathname[-3::].lower != 'png' or args.pathname[-3::].lower != 'bmp':
+        if args.pathname.endswith('jpg') or \
+            args.pathname.endswith('png') or \
+            args.pathname.endswith('bmp'):
+            # takes in input file
+            main(args.pathname, args.language, args.type, args.size_factor, args.debug_mode)
+            print('Extraction completed!')
+        else:
             print(f'{args.pathname} is not an image file\nPlease choose a correct image format file')
             exit()
-        # takes in input file
-        main(args.pathname, args.language, args.type, args.size_factor, args.debug_mode)
-        print('Extraction completed!')
     else:
         # takes in input entire directory
         if os.path.isdir(args.pathname):

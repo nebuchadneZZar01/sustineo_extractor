@@ -55,11 +55,11 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if os.path.isfile(args.pathname):
-        if args.pathname[:-3].lower != 'pdf':
+        if args.pathname.endswith('pdf'):
+            main(args.pathname, args.language, args.debug_mode, args.size_factor)
+        else:
             print(f'{args.pathname} is not a PDF file\nPlease choose a PDF file')
             exit()
-        else:
-            main(args.pathname, args.language, args.debug_mode, args.size_factor)
     else:
         if os.path.isdir(args.pathname):
             n_files = len(os.listdir(args.pathname))
