@@ -15,7 +15,7 @@ DPI = 250                       # image DPI
 ZOOM = DPI/72                   # image zoom
 
 class PDFToImage:
-    def __init__(self, path = str, language = str, debug_mode = False, size_factor = float):
+    def __init__(self, path: str, language: str, user_correction: bool, debug_mode: bool, size_factor: float):
         self.__path = path
         self.__filename = os.path.basename(self.__path)[:-4]
 
@@ -33,6 +33,7 @@ class PDFToImage:
         self.__lang = language
 
         self.__debug_mode = debug_mode
+        self.__user_correction = user_correction
 
         self.__size_factor = size_factor if size_factor != 0.0 else 1.0
 
@@ -196,6 +197,8 @@ class PDFToImage:
             else:
                 final_path = self.out_plot_path
 
+            interesting_plot = None
+
             # detecting lines
             if lines is not None and circles is None:
                 for rho, theta, in lines[:,0,]:
@@ -265,59 +268,6 @@ class PDFToImage:
                         bottom_right = (width, i_bottom_right[1] + lower_offset) if (i_bottom_right[1] + lower_offset < height) else (width, height)
 
                         interesting_plot = doc_page.raster_page[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]                      # interesting plot region
-                                                
-                        tmp = cv2.resize(interesting_plot, (int(interesting_plot.shape[1]/self.__size_factor), int(interesting_plot.shape[0]/self.__size_factor)))
-                        cv2.imshow('Found an interesting plot!', tmp)
-
-                        cv2.waitKey(0)
-                        cv2.destroyAllWindows()
-
-                        # asking user if the cropped region is ok
-                        while True:
-                            choice = input('\nIs this crop ok? [Y/n] ')
-                            # automatic crop is ok
-                            if choice.lower()[0] == 'y':
-                                if not os.path.isdir(self.out_path):
-                                    os.makedirs(self.out_path)
-                                
-                                # if interesting plot is in the page
-                                # save in the relative folder
-                                if self.lang_dict[self.lang] in doc_page.text.lower():
-                                    if not os.path.isdir(self.out_matrix_path):
-                                        os.makedirs(self.out_matrix_path)
-                                    cv2.imwrite(os.path.join(self.out_matrix_path, fn_out), interesting_plot)
-                                    # print(fn_out, 'was wrote in', self.out_matrix_path)
-                                # else save into another directory
-                                else:
-                                    if not os.path.isdir(self.out_plot_path):
-                                        os.makedirs(self.out_matrix_path)
-                                    cv2.imwrite(os.path.join(self.out_plot_path, fn_out), interesting_plot)
-                                    # print(fn_out, 'was wrote in', self.out_plot_path)
-                                break
-                            # user cropping
-                            elif choice.lower()[0] == 'n':
-                                resized_page = cv2.resize(doc_page.raster_page, resize)
-                                roi = cv2.selectROI('Select the region of interest', resized_page)
-
-                                if roi[0] != 0 and roi[1] != 0 and roi[2] != 0 and roi[3] != 0:
-                                    interesting_plot = doc_page.raster_page[int(roi[1]*self.__size_factor):int(roi[1]*self.__size_factor) + int(roi[3]*self.__size_factor),\
-                                                                    int(roi[0]*self.__size_factor):int(roi[0]*self.__size_factor) + int(roi[2]*self.__size_factor)]
-                                    resize_interesting_plot = (int(interesting_plot.shape[1]/self.__size_factor), int(interesting_plot.shape[0]/self.__size_factor))
-                                    tmp = cv2.resize(interesting_plot, resize_interesting_plot)
-                                    cv2.imshow('Selected interesting plot', tmp)
-                                    cv2.waitKey(0)
-
-                                    if not os.path.isdir(final_path):
-                                        os.makedirs(final_path)
-                                    cv2.imwrite(os.path.join(final_path, fn_out), interesting_plot)
-                                    break
-                                else:
-                                    break
-                            # invalid choice
-                            else:
-                                print('Invalid choice!')
-                                continue
-
                 except:
                     print('Not-legit intersection found, skipping to next page...')
                     continue
@@ -390,18 +340,70 @@ class PDFToImage:
                     cv2.waitKey(1500)
 
                 interesting_plot = doc_page.raster_page[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]                      # interesting plot region
-
-                tmp = cv2.resize(interesting_plot, (int(interesting_plot.shape[1]/self.__size_factor), int(interesting_plot.shape[0]/self.__size_factor)))
-                cv2.imshow('Found an interesting plot!', tmp)     
-                cv2.waitKey(1500)
-                cv2.destroyAllWindows()
-
-                if not os.path.isdir(final_path):
-                    os.makedirs(final_path)
-                cv2.imwrite(os.path.join(final_path, fn_out), interesting_plot)
             else:
                 continue
-    
+            
+            # if user correction is enabled from cli
+            if self.__user_correction and interesting_plot is not None:
+                tmp = cv2.resize(interesting_plot, (int(interesting_plot.shape[1]/self.__size_factor), int(interesting_plot.shape[0]/self.__size_factor)))
+                cv2.imshow('Found an interesting plot!', tmp)
+
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+                # asking user if the cropped region is ok
+                while True:
+                    choice = input('\nIs this crop ok? [Y/n] ')
+                    # automatic crop is ok
+                    if choice.lower()[0] == 'y':
+                        # if interesting plot is in the page
+                        # save in the relative folder
+                        if self.lang_dict[self.lang] in doc_page.text.lower():
+                            if not os.path.isdir(self.final_path):
+                                os.makedirs(self.final_path)
+                            cv2.imwrite(os.path.join(self.final_path, fn_out), interesting_plot)
+                        # else save into another directory
+                        else:
+                            if not os.path.isdir(self.out_plot_path):
+                                os.makedirs(self.out_matrix_path)
+                            cv2.imwrite(os.path.join(self.out_plot_path, fn_out), interesting_plot)
+                        cv2.destroyAllWindows()
+                        break
+                    # user cropping
+                    elif choice.lower()[0] == 'n':
+                        resized_page = cv2.resize(doc_page.raster_page, resize)
+                        roi = cv2.selectROI('Select the region of interest', resized_page)
+
+                        if roi[0] != 0 and roi[1] != 0 and roi[2] != 0 and roi[3] != 0:
+                            interesting_plot = doc_page.raster_page[int(roi[1]*self.__size_factor):int(roi[1]*self.__size_factor) + int(roi[3]*self.__size_factor),\
+                                                            int(roi[0]*self.__size_factor):int(roi[0]*self.__size_factor) + int(roi[2]*self.__size_factor)]
+                            resize_interesting_plot = (int(interesting_plot.shape[1]/self.__size_factor), int(interesting_plot.shape[0]/self.__size_factor))
+                            tmp = cv2.resize(interesting_plot, resize_interesting_plot)
+                            cv2.imshow('Selected interesting plot', tmp)
+                            cv2.waitKey(0)
+
+                            if not os.path.isdir(final_path):
+                                os.makedirs(final_path)
+                            cv2.imwrite(os.path.join(final_path, fn_out), interesting_plot)
+                            cv2.destroyAllWindows()
+                            break
+                        else:
+                            break
+                    # invalid choice
+                    else:
+                        print('Invalid choice!')
+                        continue
+            else:
+                # if not enabled, image will be normally written  
+                if interesting_plot is not None:
+                    tmp = cv2.resize(interesting_plot, (int(interesting_plot.shape[1]/self.__size_factor), int(interesting_plot.shape[0]/self.__size_factor)))
+                    cv2.imshow('Found an interesting plot!', tmp)     
+                    cv2.waitKey(1500)
+                    cv2.destroyAllWindows()
+
+                    if not os.path.isdir(final_path):
+                        os.makedirs(final_path)
+                    cv2.imwrite(os.path.join(final_path, fn_out), interesting_plot)
+
     def run(self):
         self.__page_to_img()
         self.__img_to_plot()

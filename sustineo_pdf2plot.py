@@ -4,9 +4,9 @@ import argparse
 from lib.pdf2plot.plot_extractor import PDFToImage
 from lib.pdf2plot.tables_extractor import TableToCSV
 
-def main(pdf_path, language, debug, size_factor):
+def main(pdf_path, language, user_correction, debug, size_factor):
     print(f'File {pdf_path} selected')
-    plot_extr = PDFToImage(pdf_path, language, debug, size_factor)
+    plot_extr = PDFToImage(pdf_path, language, user_correction, debug, size_factor)
     plot_extr.run()
     table_extr = TableToCSV(pdf_path)
     table_extr.run()
@@ -16,6 +16,11 @@ def main(pdf_path, language, debug, size_factor):
     out_matrix_path = os.path.join('out', filename, 'img', 'm_matrix')
     out_gri_table_path = os.path.join('out', filename, 'table', 'gri')
     out_other_table_path = os.path.join('out', filename, 'table', 'other')
+
+    cnt_plots = 0
+    cnt_matrices = 0
+    cnt_gri_tables = 0
+    cnt_other_tables = 0
 
     if os.path.isdir(out_plot_path):
         cnt_plots = len(os.listdir(out_plot_path))
@@ -45,9 +50,12 @@ if __name__ == '__main__':
 
     parser.add_argument('-l', '--language', type=str, default='ita',\
                         help='language of the plot to extract (default="ita")')
-
+    
+    parser.add_argument('-c', '--correction', action='store_true',\
+                        help='enable user correction')
+    
     parser.add_argument('-d', '--debug-mode', action='store_true',\
-                        help='activate the visualization of the various passes')
+                        help='enable the visualization of the various passes')
 
     parser.add_argument('-s', '--size-factor', type=float, default=3,\
                         help='if used in debug mode, the image sizes will be divided by the choosen\
@@ -57,7 +65,7 @@ if __name__ == '__main__':
 
     if os.path.isfile(args.pathname):
         if args.pathname.endswith('pdf'):
-            main(args.pathname, args.language, args.debug_mode, args.size_factor)
+            main(args.pathname, args.language, args.correction, args.debug_mode, args.size_factor)
         else:
             print(f'{args.pathname} is not a PDF file\nPlease choose a PDF file')
             exit()
