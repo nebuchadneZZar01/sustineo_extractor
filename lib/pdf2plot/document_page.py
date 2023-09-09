@@ -2,6 +2,15 @@
 # all the useful informations such as raster and 
 # vector page, provenience filename and number 
 class DocumentPage:
+    """Object describing a PDF-format file document page and containing all its informations.
+
+    Keyword arguments:
+        - filename -- Name of the PDF file which contains the page
+        - raster_page -- Raster-format image data, containing all its features
+        - vector_page -- Image data containing only the "shapes" (its vectorial information)
+        - text -- Actual text in the page
+        - page_text -- Number of the page in the PDF file document
+    """
     def __init__(self, filename: str, page_number: int, raster_page, vector_page, page_text):
         self.__filename = filename
         self.__raster_page = raster_page

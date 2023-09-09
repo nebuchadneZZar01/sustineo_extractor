@@ -5,7 +5,12 @@ import pandas as pd
 from tqdm import tqdm
 
 class TableToCSV:
-    def __init__(self, path = str):
+    """Object for extracting tables into CSV-format files from PDF-format files.
+    
+    Keyword Arguments:
+        - path -- Path to the PDF file to extract
+    """
+    def __init__(self, path: str):
         self.__path = path
         self.__filename = os.path.basename(self.__path)[:-4]
 

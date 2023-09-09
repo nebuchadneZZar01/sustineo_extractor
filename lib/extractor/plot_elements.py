@@ -1,8 +1,13 @@
 from numpy import sqrt
 
-# defines circular blobs
-# in the plot
 class Blob:
+    """Object defining circular blobs in the plots.
+
+    Keyword Arguments:
+        - center_x -- x coordinate of the central origin of the circle (in pixels)
+        - center_y -- y coordinate of the central origin of the circle (in pixels)
+        - radius -- Radius of the circle (in pixels)
+    """
     def __init__(self, center_x, center_y, radius):
         self.__center_x = center_x
         self.__center_y = center_y
@@ -28,9 +33,13 @@ class Blob:
         return self.__radius
 
 
-# defines rectangular boxes (containing labels)
-# in the plot
 class Box:
+    """Object definining rectangular boxes - containing labels - in the plot.
+
+    Keyword Arguments:
+        - top_left -- Coordinates of the upper-left vertex (in pixels)
+        - bottom_right -- Coordinates of the lower-right vertex (in pixels)
+    """
     def __init__(self, top_left, bottom_right):
         self.__top_left = tuple(top_left)
         self.__bottom_right = tuple(bottom_right)
@@ -75,9 +84,15 @@ class Box:
     def center(self):
         return self.__center  
 
-# defines the bounding box of
-# the words detected using OCR
 class TextBox(Box):
+    """Object defining the single word bounding box of the words detected by using OCR (Box subclass).
+
+    Keywords Arguments:
+        - position -- Coordinates of the TextBox in the plot
+        - width -- Width of the rectangle identifying the box
+        - height -- Height of the rectangle identifying the box
+        - text -- Single word contained in the box
+    """
     def __init__(self, position, width, height, text):
         super(TextBox, self).__init__(position, (position[0]+width, position[1]+height))
         self.__position = tuple(position)
@@ -110,10 +125,13 @@ class TextBox(Box):
         
         return dist
 
-# defines the labelboxes containing
-# all the single words and forming
-# the entire label
 class LabelBox(Box):
+    """Object defining the text contained in every single TextBox conained in a bigger box and forming the entire label (Box subclass).
+
+    Keyword Arguments:
+        - top_left -- Coordinates of the upper-left vertex (in pixels)
+        - bottom_right -- Coordinates of the lower-right vertex (in pixels)
+    """
     def __init__(self, top_left, bottom_right):
         super(LabelBox, self).__init__(top_left, bottom_right)
         self.__label = ''
@@ -161,10 +179,13 @@ class LabelBox(Box):
         else:
             pass
 
-# defines labelboxes without color
-# used to identify labels that have
-# to be joined with the detected blobs
 class LabelBoxColorless(Box):
+    """Object defining labelboxes without color used in blob-type plots to identify labels that have to be joined with the detected blobs (Box subclass).
+
+    Keyword Arguments:
+        - top_left -- Coordinates of the upper-left vertex (in pixels)
+        - bottom_right -- Coordinates of the lower-right vertex (in pixels)
+    """
     def __init__(self, top_left, bottom_right):
         super(LabelBoxColorless, self).__init__(top_left, bottom_right)
         self.__label = ''
@@ -204,10 +225,14 @@ class LabelBoxColorless(Box):
 
         self.__label = label
 
-# blobs including the text and
-# and the color data
-# center equals the position
 class BlobBox(Blob):
+    """Object defining the blobs that include the text and the color data.
+
+    Keyword Arguments:
+        - center_x -- x coordinate of the central origin of the circle (in pixels)
+        - center_y -- y coordinate of the central origin of the circle (in pixels)
+        - radius -- Radius of the circle (in pixels)
+    """
     def __init__(self, center_x, center_y, radius):
         super().__init__(center_x, center_y, radius)
         self.__label = ''
@@ -254,10 +279,12 @@ class BlobBox(Blob):
 # LEGEND #
 ##########
 
-# defines the block containing a legend label
-# with its color, its label and starting from
-# the upper-left vertex
 class LegendBox(Box):
+    """Object defining the blocks that contain a legend label, characterized by its own color, starting from its upper-left vertex. 
+
+    Keyword Arguments:
+        - top_left -- Coordinates of the upper-left vertex of the Box (in pixels, used as origin)
+    """
     def __init__(self, top_left):
         super(LegendBox, self).__init__(top_left, bottom_right = (0,0))
         self.__label = ''

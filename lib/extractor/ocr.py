@@ -6,7 +6,15 @@ from lib.extractor.plot_elements import TextBox, LabelBox, LabelBoxColorless, Le
 from pytesseract import pytesseract as pt
 
 class OCR:
-	def __init__(self, image, lang = str, scale_factor = float, debug_mode = bool):
+	"""Object defining the Optical Character Recognition; it externally calls a TesseractOCR routine using the pytesseract module.
+
+	Keyword Arguments:
+		- image -- Data of the input image file containing the plot
+		- lang -- Language of the plot
+		- scale_factor -- Determines the scale-down of the image visualization
+		- debug_mode -- Option to visualize the shape detection in real-time 
+	"""
+	def __init__(self, image, lang: str, scale_factor: float, debug_mode: bool):
 		self.__image = image
 		self.__debug_mode = debug_mode
 		self.__lang = lang						# language of the labels
@@ -58,10 +66,15 @@ class OCR:
 	def get_data(self):
 		pass
 
-# PlotOCR superclass defines the euristics
-# later used following the different type
-# of plots
 class PlotOCR(OCR):
+	"""Class defining the euristics later used following the different type of plots (OCR subclass).
+
+	Keyword Arguments:
+		- image -- Data of the input image file containing the plot
+		- lang -- Language of the plot
+		- scale_factor -- Determines the scale-down of the image visualization
+		- debug_mode -- Option to visualize the shape detection in real-time 
+	"""
 	def __init__(self, image, lang = str, scale_factor = float, debug_mode = bool):
 		super(PlotOCR, self).__init__(image, lang, scale_factor, debug_mode)
 		self.__labelboxes = []					# will contain the bounding boxes of the entire labels
@@ -170,10 +183,16 @@ class PlotOCR(OCR):
 
 					self.textboxes.append(tb)
 
-# OCR object class useful to
-# detect plot part of the image
 class PlotOCR_Box(PlotOCR):
-	def __init__(self, image, lang = str, scale_factor = float, debug_mode = bool):
+	"""Object useful to detect the plot-part of the image in box-type plots (PlotOCR subclass).
+
+	Keyword Arguments:
+		- image -- Data of the input image file containing the plot
+		- lang -- Language of the plot
+		- scale_factor -- Determines the scale-down of the image visualization
+		- debug_mode -- Option to visualize the shape detection in real-time 
+	"""
+	def __init__(self, image, lang: str, scale_factor: float, debug_mode: bool):
 		super(PlotOCR_Box, self).__init__(image, lang, scale_factor, debug_mode)
 	
 	# function that detects all the rectangles that contain the labels
@@ -402,10 +421,16 @@ class PlotOCR_Box(PlotOCR):
 		
 		return colors
 
-# class used exclusively on plots
-# that have blob-type forms 
 class PlotOCR_Blob(PlotOCR):
-	def __init__(self, image, lang = str, scale_factor = float, debug_mode = bool):
+	"""Object useful to detect the plot-part of the image in blob-type plots (PlotOCR subclass).
+
+	Keyword Arguments:
+		- image -- Data of the input image file containing the plot
+		- lang -- Language of the plot
+		- scale_factor -- Determines the scale-down of the image visualization
+		- debug_mode -- Option to visualize the shape detection in real-time 
+	"""
+	def __init__(self, image, lang: str, scale_factor: float, debug_mode: bool):
 		super(PlotOCR_Blob, self).__init__(image, lang, scale_factor, debug_mode)
 		params = cv2.SimpleBlobDetector_Params()
 
@@ -627,7 +652,16 @@ class PlotOCR_Blob(PlotOCR):
 # OCR object class useful to detect
 # the legend part of the image
 class LegendOCR(OCR):
-	def __init__(self, image, labelboxes, lang, scale_factor, debug_mode):
+	"""Object useful to detect the plot-part of the image in blob-type plots (PlotOCR subclass).
+
+	Keyword Arguments:
+		- image -- Data of the image-part containing the legend
+		- labelboxes -- List of all the labelboxes
+		- lang -- Language of the plot
+		- scale_factor -- Determines the scale-down of the image visualization
+		- debug_mode -- Option to visualize the shape detection in real-time 
+	"""
+	def __init__(self, image, labelboxes: list, lang: str, scale_factor: float, debug_mode: bool):
 		super(LegendOCR, self).__init__(image, lang, scale_factor, debug_mode)
 		
 		_, self.work_image = cv2.threshold(self.image_gray, 240, 255, cv2.THRESH_BINARY)

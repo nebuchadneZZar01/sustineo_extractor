@@ -3,11 +3,15 @@ import numpy as np
 import math
 from lib.extractor.plot_elements import Blob
 
-# object class that crops the image, returning
-# the plot-part and the legend-part in order to
-# later manipulate them separately 
 class Cropper:
-    def __init__(self, image, debug_mode = False, scale_factor = float):
+    """Object that crops the image, returning the plot-part and the legend-part in order to manipulater them separately.
+
+    Keyword Arguments:
+        - image -- Data of the source image containing the plot
+        - debug_mode -- Option to activate the debug mode, in order to visualize the real-time shape detection visualization
+        - scale_factor -- Value that defines the image-visualization visualization downscaling    
+    """
+    def __init__(self, image, debug_mode: bool, scale_factor: float):
         self.__image = image
         self.__image_size = image.shape[0:2]
         self.__image_size = self.image_size[::-1]      
@@ -170,7 +174,14 @@ class Cropper:
         return plot, legend
     
 class BlobCropper:
-    def __init__(self, image, debug_mode = bool, scale_factor = float):
+    """Object that crops the image, returning the plot-part and the legend-part in order to manipulater them separately (used for Blob-type plots).
+
+    Keyword Arguments:
+        - image -- Data of the source image containing the plot
+        - debug_mode -- Option to activate the debug mode, in order to visualize the real-time shape detection visualization
+        - scale_factor -- Value that defines the image-visualization visualization downscaling    
+    """
+    def __init__(self, image, debug_mode: bool, scale_factor: float):
         self.__image = image
         self.__image_size = image.shape[0:2]
         self.__image_size = self.image_size[::-1]      

@@ -15,6 +15,16 @@ DPI = 250                       # image DPI
 ZOOM = DPI/72                   # image zoom
 
 class PDFToImage:
+    """Object for extracting images and plots from PDF format files.
+    
+    Keyword Arguments:
+        - path -- Path to the PDF file to extract
+        - language -- Language of the PDF file
+        - user_correction -- Option to manually correct the image extraction
+        - paragraph -- Option to remove detected likely paragraphs in the extracted image
+        - debug_mode -- Option to visualize the shape detection in real-time
+        - size_fatctor -- Determines the scale-down of the image visualization
+    """
     def __init__(self, path: str, language: str, user_correction: bool, paragraph: bool, debug_mode: bool, size_factor: float):
         self.__path = path
         self.__filename = os.path.basename(self.__path)[:-4]

@@ -8,6 +8,13 @@ from matplotlib.patches import Patch
 from os.path import dirname as up
 
 class Exporter:
+    """Object to export the data gathered from the plot into a CSV-format file.
+
+    Keyword Arguments:
+        - path -- Path to the orignal plot image
+        - plot_data -- Data extracted using PlotOCR-class object
+        - legend_data -- Legend of the data extracted using PlotOCR-class object 
+    """
     def __init__(self, path: str, plot_data: list, legend_data: list):
         self.__path = path
         self.__pdf_doc_name = up(up(up(self.__path)))[4::]
