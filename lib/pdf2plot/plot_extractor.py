@@ -265,8 +265,12 @@ class PDFToImage:
                             cv2.imshow('Finding interesting plots...', tmp_res)
                             cv2.waitKey(1500)
 
-                        upper_offset = 350                              # vertical offset
-                        lower_offset = 300
+                        # vertical offset
+                        upper_offset = int(1/9 * doc_page.page_size[1])
+                        lower_offset = int(1/10 * doc_page.page_size[1])   
+
+                        # upper_offset = 350                              
+                        # lower_offset = 300
 
                         # final cropped area delimiters
                         top_left = (0, i_top_left[1] - upper_offset) if (i_top_left[1] - upper_offset > 0) else (0, 0)
@@ -424,9 +428,8 @@ class PDFToImage:
 
                     rect = interesting_plot[y:y+h, x:x+w]                                               # we then "fine-crop" the image
                                                                                                         # finally we calculate:
-                    x_offset_crop = int(1/10 * interesting_plot.shape[1])                               # an horizontal offset and
-                    y_offset_crop = int(1/10 * interesting_plot.shape[0])                               # a vertical offset
-
+                    x_offset_crop = int(1/6 * interesting_plot.shape[1])                                # an horizontal offset (because of the lower width dimension)
+                    y_offset_crop = int(1/10 * interesting_plot.shape[0])                               # and a vertical offset
 
                     if rect.shape != (0, 0, 3):                                                         # in order to crop a larger portion of the original image
                         final_rect = interesting_plot[(y - y_offset_crop):(y + h + y_offset_crop),      # which includes the final plot
@@ -437,7 +440,7 @@ class PDFToImage:
                             cv2.waitKey(500)
 
                             # ask to the user whether he wants to remove the paragraphs or not
-                            choice = input('\nA paragraph has been detected: do you want to remove the paragraphs? [Y/n] ')            
+                            choice = input('\nLikely paragraphs have been detected: do you want to remove the paragraphs? [Y/n] ')            
                             if choice.lower()[0] == 'y':
                                 if final_rect.size != 0:                                    
                                     try:
@@ -448,7 +451,9 @@ class PDFToImage:
                                         cv2.imshow('Paragraphs removed!', tmp)
                                         cv2.waitKey(1500)
                                     except:
-                                        print('There was an error! Saving original file instead')
+                                        print('There was an error: probably there wasn\'t actually any paragraph! Saving original file instead')
+                                else:
+                                    print('There was an error: probably there wasn\'t actually any paragraph! Saving original file instead')
                     else:
                         cv2.imshow('Found an interesting plot!', tmp)
                         cv2.waitKey(1500)
