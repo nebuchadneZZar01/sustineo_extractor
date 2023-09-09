@@ -15,7 +15,7 @@ DPI = 250                       # image DPI
 ZOOM = DPI/72                   # image zoom
 
 class PDFToImage:
-    def __init__(self, path: str, language: str, user_correction: bool, debug_mode: bool, size_factor: float):
+    def __init__(self, path: str, language: str, user_correction: bool, paragraph: bool, debug_mode: bool, size_factor: float):
         self.__path = path
         self.__filename = os.path.basename(self.__path)[:-4]
 
@@ -23,6 +23,7 @@ class PDFToImage:
         self.__out_path = os.path.join(os.getcwd(), 'out', self.__filename)
 
         self.__out_plot_path = os.path.join(self.__out_path, 'img', 'plot')
+        self.__out_plot_wo_par_path = os.path.join(self.__out_plot_path, 'no_par')
         self.__out_matrix_path = os.path.join(self.__out_path, 'img', 'm_matrix')
 
         self.__magnify = fitz.Matrix(ZOOM, ZOOM)
@@ -34,6 +35,8 @@ class PDFToImage:
 
         self.__debug_mode = debug_mode
         self.__user_correction = user_correction
+        self.__paragraph_removal = paragraph
+        self.__paragraph_pages = 0
 
         self.__size_factor = size_factor if size_factor != 0.0 else 1.0
 
@@ -54,6 +57,10 @@ class PDFToImage:
         return self.__out_plot_path
     
     @property
+    def out_plot_wo_par_path(self):
+        return self.__out_plot_wo_par_path
+    
+    @property
     def out_matrix_path(self):
         return self.__out_matrix_path
     
@@ -72,6 +79,17 @@ class PDFToImage:
     @property
     def lang(self):
         return self.__lang
+    
+    @property
+    def paragraph_pages(self):
+        return self.__paragraph_pages
+    
+    @paragraph_pages.setter
+    def paragraph_pages(self, new_val: int):
+        self.__paragraph_pages = new_val
+
+    def paragraph_pages_add(self):
+        self.paragraph_pages += 1
 
     def __page_to_img(self):
         pbar = tqdm(range(self.__pdf_doc.page_count))
@@ -436,24 +454,35 @@ class PDFToImage:
                                                     (x - x_offset_crop):(x + w + x_offset_crop)]
                         
                         if final_rect.shape != (0, 0, 3):
-                            cv2.imshow('Interesting plot with paragraph', tmp)
-                            cv2.waitKey(500)
+                            # normal extraction mode
+                            if not self.__paragraph_removal:
+                                self.paragraph_pages_add()
 
-                            # ask to the user whether he wants to remove the paragraphs or not
-                            choice = input('\nLikely paragraphs have been detected: do you want to remove the paragraphs? [Y/n] ')            
-                            if choice.lower()[0] == 'y':
+                                cv2.imshow('Found an interesting plot!', tmp)
+                                cv2.waitKey(1500)
+
+                                print(f'This plot (page {doc_page.page_number}) has a likely paragraph and it will be reported at the end of the extraction')
+                            # paragraph removal mode
+                            else:
+                                cv2.imshow('Interesting plot with paragraph', tmp)
+                                cv2.waitKey(500)
+
                                 if final_rect.size != 0:                                    
                                     try:
                                         final_plot = final_rect
                                         tmp = cv2.resize(final_rect, (int(final_rect.shape[1]/self.__size_factor), 
-                                                                      int(final_rect.shape[0]/self.__size_factor)))
-                                       
+                                                                    int(final_rect.shape[0]/self.__size_factor)))
+                                    
                                         cv2.imshow('Paragraphs removed!', tmp)
                                         cv2.waitKey(1500)
+
+                                        if not os.path.isdir(self.out_plot_wo_par_path):
+                                            os.makedirs(self.out_plot_wo_par_path)
+                                        cv2.imwrite(os.path.join(self.out_plot_wo_par_path, fn_out), final_plot)
                                     except:
-                                        print('There was an error: probably there wasn\'t actually any paragraph! Saving original file instead')
+                                        print('There was an error: probably there wasn\'t actually any paragraph! Paragraph elimination aborted')
                                 else:
-                                    print('There was an error: probably there wasn\'t actually any paragraph! Saving original file instead')
+                                    print('There was an error: probably there wasn\'t actually any paragraph! Paragraph elimination aborted')
                     else:
                         cv2.imshow('Found an interesting plot!', tmp)
                         cv2.waitKey(1500)
