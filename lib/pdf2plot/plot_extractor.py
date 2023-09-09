@@ -88,7 +88,9 @@ class PDFToImage:
             # getting the textless-image
             # it is formed only of not-colored vector-type shapes
             paths = self.__pdf_doc[page].get_drawings()
-            page_textless = self.__pdf_doc.new_page(width=self.__pdf_doc[page].rect.width, height=self.__pdf_doc[page].rect.height)
+            page_textless = self.__pdf_doc.new_page(width=self.__pdf_doc[page].rect.width, 
+                                                    height=self.__pdf_doc[page].rect.height)
+            
             shape = page_textless.new_shape()
 
             for path in paths:
@@ -168,7 +170,8 @@ class PDFToImage:
                     if len(text) > 1:
                         cv2.rectangle(page_copy, (x, y), (x + w, y + h), (255, 255, 255), -1)
 
-            resize = (int(doc_page.vector_page.shape[1]/self.__size_factor), int(doc_page.vector_page.shape[0]/self.__size_factor))
+            resize = (int(doc_page.vector_page.shape[1]/self.__size_factor), 
+                      int(doc_page.vector_page.shape[0]/self.__size_factor))
 
             if self.__debug_mode:
                 tmp_res = cv2.resize(page_copy, resize)
@@ -180,7 +183,9 @@ class PDFToImage:
 
             edges = cv2.Canny(work_image, 50, 150, apertureSize=3)
             lines = cv2.HoughLines(edges, 1, math.pi/180, 700)
-            circles = cv2.HoughCircles(work_image, cv2.HOUGH_GRADIENT, 1, minDist=150, param1=100, param2=51, minRadius=100, maxRadius=1000)
+            circles = cv2.HoughCircles(work_image, cv2.HOUGH_GRADIENT, 1, 
+                                       minDist=150, param1=100, param2=51, 
+                                       minRadius=100, maxRadius=1000)
 
             rows = []
             columns = []
@@ -339,13 +344,16 @@ class PDFToImage:
                     cv2.imshow('Finding interesting plots...', tmp_res)
                     cv2.waitKey(1500)
 
-                interesting_plot = doc_page.raster_page[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]                      # interesting plot region
+                interesting_plot = doc_page.raster_page[top_left[1]:bottom_right[1], 
+                                                        top_left[0]:bottom_right[0]]                      # interesting plot region
             else:
                 continue
             
             # if user correction is enabled from cli
             if self.__user_correction and interesting_plot is not None:
-                tmp = cv2.resize(interesting_plot, (int(interesting_plot.shape[1]/self.__size_factor), int(interesting_plot.shape[0]/self.__size_factor)))
+                tmp = cv2.resize(interesting_plot, (int(interesting_plot.shape[1]/self.__size_factor), 
+                                                    int(interesting_plot.shape[0]/self.__size_factor)))
+                
                 cv2.imshow('Found an interesting plot!', tmp)
 
                 cv2.waitKey(0)
@@ -374,9 +382,12 @@ class PDFToImage:
                         roi = cv2.selectROI('Select the region of interest', resized_page)
 
                         if roi[0] != 0 and roi[1] != 0 and roi[2] != 0 and roi[3] != 0:
-                            interesting_plot = doc_page.raster_page[int(roi[1]*self.__size_factor):int(roi[1]*self.__size_factor) + int(roi[3]*self.__size_factor),\
-                                                            int(roi[0]*self.__size_factor):int(roi[0]*self.__size_factor) + int(roi[2]*self.__size_factor)]
-                            resize_interesting_plot = (int(interesting_plot.shape[1]/self.__size_factor), int(interesting_plot.shape[0]/self.__size_factor))
+                            interesting_plot = doc_page.raster_page[int(roi[1]*self.__size_factor):int(roi[1]*self.__size_factor) + int(roi[3]*self.__size_factor),
+                                                                    int(roi[0]*self.__size_factor):int(roi[0]*self.__size_factor) + int(roi[2]*self.__size_factor)]
+                            
+                            resize_interesting_plot = (int(interesting_plot.shape[1]/self.__size_factor), 
+                                                       int(interesting_plot.shape[0]/self.__size_factor))
+                            
                             tmp = cv2.resize(interesting_plot, resize_interesting_plot)
                             cv2.imshow('Selected interesting plot', tmp)
                             cv2.waitKey(0)
@@ -395,14 +406,59 @@ class PDFToImage:
             else:
                 # if not enabled, image will be normally written  
                 if interesting_plot is not None:
-                    tmp = cv2.resize(interesting_plot, (int(interesting_plot.shape[1]/self.__size_factor), int(interesting_plot.shape[0]/self.__size_factor)))
-                    cv2.imshow('Found an interesting plot!', tmp)     
-                    cv2.waitKey(1500)
+                    final_plot = interesting_plot
+                    tmp = cv2.resize(interesting_plot, (int(interesting_plot.shape[1]/self.__size_factor), 
+                                                        int(interesting_plot.shape[0]/self.__size_factor)))
+                    
+                    # searching text paragraphs
+                    plot_gray = cv2.cvtColor(interesting_plot, cv2.COLOR_BGR2GRAY)
+                    thresh = cv2.threshold(plot_gray, 100, 255, cv2.THRESH_BINARY)[1]                   # first we threshold the image in order to thin the text
+
+                    kernel = np.ones((5,5), np.uint8)
+                    dilated_tresh = cv2.dilate(thresh, kernel)                                          # then we remove the text using a 5x5-kernel dilatation
+                    dilated_tresh = cv2.dilate(dilated_tresh, kernel)                                   # (for two times)
+                    opening = cv2.morphologyEx(dilated_tresh, cv2.MORPH_OPEN, kernel)                   # the opening is necessary to remove isolated pixels
+                    negative = 255 - opening                                                            # we then find the negative image in order to
+                    coords = cv2.findNonZero(negative)                                                  # find the non-zero points (where the plot is located)
+                    x, y, w, h = cv2.boundingRect(coords)                                               # localizing the plot    
+
+                    rect = interesting_plot[y:y+h, x:x+w]                                               # we then "fine-crop" the image
+                                                                                                        # finally we calculate:
+                    x_offset_crop = int(1/10 * interesting_plot.shape[1])                               # an horizontal offset and
+                    y_offset_crop = int(1/10 * interesting_plot.shape[0])                               # a vertical offset
+
+
+                    if rect.shape != (0, 0, 3):                                                         # in order to crop a larger portion of the original image
+                        final_rect = interesting_plot[(y - y_offset_crop):(y + h + y_offset_crop),      # which includes the final plot
+                                                    (x - x_offset_crop):(x + w + x_offset_crop)]
+                        
+                        if final_rect.shape != (0, 0, 3):
+                            cv2.imshow('Interesting plot with paragraph', tmp)
+                            cv2.waitKey(500)
+
+                            # ask to the user whether he wants to remove the paragraphs or not
+                            choice = input('\nA paragraph has been detected: do you want to remove the paragraphs? [Y/n] ')            
+                            if choice.lower()[0] == 'y':
+                                if final_rect.size != 0:                                    
+                                    try:
+                                        final_plot = final_rect
+                                        tmp = cv2.resize(final_rect, (int(final_rect.shape[1]/self.__size_factor), 
+                                                                      int(final_rect.shape[0]/self.__size_factor)))
+                                       
+                                        cv2.imshow('Paragraphs removed!', tmp)
+                                        cv2.waitKey(1500)
+                                    except:
+                                        print('There was an error! Saving original file instead')
+                    else:
+                        cv2.imshow('Found an interesting plot!', tmp)
+                        cv2.waitKey(1500)
+
                     cv2.destroyAllWindows()
 
+                    # saving the final plot
                     if not os.path.isdir(final_path):
                         os.makedirs(final_path)
-                    cv2.imwrite(os.path.join(final_path, fn_out), interesting_plot)
+                    cv2.imwrite(os.path.join(final_path, fn_out), final_plot)
 
     def run(self):
         self.__page_to_img()
