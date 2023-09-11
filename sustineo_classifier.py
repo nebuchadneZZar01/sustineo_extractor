@@ -1,5 +1,5 @@
 import pytorch_lightning as pl
-from lib.classifier.cnn import PlotCNN
+from lib.classification.cnn import PlotCNN
 
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
