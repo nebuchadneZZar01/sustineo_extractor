@@ -10,6 +10,7 @@ import gc
 
 from lib.pdf2plot.document_page import DocumentPage
 from tqdm import tqdm
+from csv import DictWriter
 
 DPI = 250                       # image DPI
 ZOOM = DPI/72                   # image zoom
@@ -22,16 +23,18 @@ class PDFToImage:
         - language -- Language of the PDF file
         - user_correction -- Option to manually correct the image extraction
         - paragraph -- Option to remove detected likely paragraphs in the extracted image
+        - dataset_creation -- Option to create a dataset containing the extracted plot
         - debug_mode -- Option to visualize the shape detection in real-time
         - size_fatctor -- Determines the scale-down of the image visualization
     """
-    def __init__(self, path: str, language: str, user_correction: bool, paragraph: bool, debug_mode: bool, size_factor: float):
+    def __init__(self, path: str, language: str, user_correction: bool, paragraph: bool, dataset_creation: bool, debug_mode: bool, size_factor: float):
         self.__path = path
         self.__filename = os.path.basename(self.__path)[:-4]
 
         self.__pdf_doc = fitz.open(path)
         self.__out_path = os.path.join(os.getcwd(), 'out', self.__filename)
 
+        self.__out_img_path = os.path.join(self.__out_path, 'img')
         self.__out_plot_path = os.path.join(self.__out_path, 'img', 'plot')
         self.__out_plot_wo_par_path = os.path.join(self.__out_plot_path, 'no_par')
         self.__out_matrix_path = os.path.join(self.__out_path, 'img', 'm_matrix')
@@ -46,9 +49,13 @@ class PDFToImage:
         self.__debug_mode = debug_mode
         self.__user_correction = user_correction
         self.__paragraph_removal = paragraph
+        self.__dataset_creation = dataset_creation
         self.__paragraph_pages = 0
 
         self.__size_factor = size_factor if size_factor != 0.0 else 1.0
+
+        if self.__dataset_creation:
+            self.__out_csv_annotations = (os.path.join(os.getcwd(), 'out', 'annotations.csv'))
 
     @property
     def filename(self):
@@ -73,6 +80,10 @@ class PDFToImage:
     @property
     def out_matrix_path(self):
         return self.__out_matrix_path
+    
+    @property
+    def out_csv_annotations(self):
+        return self.__out_csv_annotations
     
     @property
     def doc_pages(self):
@@ -382,7 +393,7 @@ class PDFToImage:
                 continue
             
             # if user correction is enabled from cli
-            if self.__user_correction and interesting_plot is not None:
+            if (self.__user_correction or self.__dataset_creation) and interesting_plot is not None:
                 tmp = cv2.resize(interesting_plot, (int(interesting_plot.shape[1]/self.__size_factor), 
                                                     int(interesting_plot.shape[0]/self.__size_factor)))
                 
@@ -398,9 +409,9 @@ class PDFToImage:
                         # if interesting plot is in the page
                         # save in the relative folder
                         if self.lang_dict[self.lang] in doc_page.text.lower():
-                            if not os.path.isdir(self.final_path):
-                                os.makedirs(self.final_path)
-                            cv2.imwrite(os.path.join(self.final_path, fn_out), interesting_plot)
+                            if not os.path.isdir(final_path):
+                                os.makedirs(final_path)
+                            cv2.imwrite(os.path.join(final_path, fn_out), interesting_plot)
                         # else save into another directory
                         else:
                             if not os.path.isdir(self.out_plot_path):
@@ -435,6 +446,28 @@ class PDFToImage:
                     else:
                         print('Invalid choice!')
                         continue
+                
+                # dataset creation will enable a new prompt
+                if self.__dataset_creation:
+                    class_label = input('Enter class label for this plot: ')
+
+                    field_names = ['file_path', 'label']
+                    row = {'file_path': os.path.join(final_path, fn_out),
+                           'label': class_label}
+                    
+                    if not os.path.isfile(self.out_csv_annotations):
+                        with open(self.out_csv_annotations, 'a') as csv_annotations:
+                            dw = DictWriter(csv_annotations, fieldnames=field_names)
+                            dw.writeheader()
+
+                            dw.writerow(row)
+                            csv_annotations.close()
+                    else:
+                        with open(self.out_csv_annotations, 'a') as csv_annotations:
+                            dw = DictWriter(csv_annotations, fieldnames=field_names)
+
+                            dw.writerow(row)
+                            csv_annotations.close()            
             else:
                 # if not enabled, image will be normally written  
                 if interesting_plot is not None:
