@@ -47,10 +47,10 @@ def main(pdf_path, language, user_correction, paragraph, debug, size_factor):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='sustineo_pdf2plot',
-                                description='This program extracts materiality matrices in raster-format and tables in csv format from pdf files.\
-                                            \nAuthor: nebuchadneZZar01 (Michele Ferro)\
-                                            \nGitHub: https://github.com/nebuchadneZZar01/',\
-                                            formatter_class=argparse.RawDescriptionHelpFormatter)
+                                    description='This program extracts materiality matrices in raster-format and tables in csv format from pdf files.\
+                                                \nAuthor: nebuchadneZZar01 (Michele Ferro)\
+                                                \nGitHub: https://github.com/nebuchadneZZar01/',\
+                                                formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument('pathname')
 
