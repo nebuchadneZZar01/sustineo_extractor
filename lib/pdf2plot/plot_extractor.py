@@ -55,7 +55,7 @@ class PDFToImage:
         self.__size_factor = size_factor if size_factor != 0.0 else 1.0
 
         if self.__dataset_creation:
-            self.__out_csv_annotations = (os.path.join(os.getcwd(), 'out', 'annotations.csv'))
+            self.__out_csv_annotations = os.path.join(os.getcwd(), 'out', 'annotations.csv')
 
     @property
     def filename(self):
@@ -452,7 +452,7 @@ class PDFToImage:
                     class_label = input('Enter class label for this plot: ')
 
                     field_names = ['file_path', 'label']
-                    row = {'file_path': os.path.join(final_path, fn_out),
+                    row = {'file_path': os.path.join(os.path.relpath(final_path), fn_out),
                            'label': class_label}
                     
                     if not os.path.isfile(self.out_csv_annotations):
