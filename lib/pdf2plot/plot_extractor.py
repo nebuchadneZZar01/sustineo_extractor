@@ -406,18 +406,9 @@ class PDFToImage:
                     choice = input('\nIs this crop ok? [Y/n] ')
                     # automatic crop is ok
                     if choice.lower()[0] == 'y':
-                        # if interesting plot is in the page
-                        # save in the relative folder
-                        if self.lang_dict[self.lang] in doc_page.text.lower():
-                            if not os.path.isdir(final_path):
-                                os.makedirs(final_path)
-                            cv2.imwrite(os.path.join(final_path, fn_out), interesting_plot)
-                        # else save into another directory
-                        else:
-                            if not os.path.isdir(self.out_plot_path):
-                                os.makedirs(self.out_matrix_path)
-                            cv2.imwrite(os.path.join(self.out_plot_path, fn_out), interesting_plot)
-                        cv2.destroyAllWindows()
+                        if not os.path.isdir(final_path):
+                            os.makedirs(final_path)
+                        cv2.imwrite(os.path.join(final_path, fn_out), interesting_plot)
                         break
                     # user cropping
                     elif choice.lower()[0] == 'n':
