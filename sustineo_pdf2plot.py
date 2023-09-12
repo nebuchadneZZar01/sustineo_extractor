@@ -8,8 +8,9 @@ def main(pdf_path, language, user_correction, paragraph, dataset_creation, debug
     print(f'File {pdf_path} selected')
     plot_extr = PDFToImage(pdf_path, language, user_correction, paragraph, dataset_creation, debug, size_factor)
     plot_extr.run()
-    table_extr = TableToCSV(pdf_path)
-    table_extr.run()
+    if not dataset_creation:
+        table_extr = TableToCSV(pdf_path)
+        table_extr.run()
 
     filename = os.path.basename(pdf_path)[:-4]
     out_plot_path = os.path.join('out', filename, 'img', 'plot')
@@ -88,5 +89,6 @@ if __name__ == '__main__':
                 complete_fn = os.path.join(args.pathname, fn)
                 print(f'Extracting data from file {i+1} of {n_files}...\n')
                 main(complete_fn, args.language, args.correction, args.paragraph, args.dataset_creation, args.debug_mode, args.size_factor)
+                os.remove(complete_fn)
         else:
             print(f'ERROR: File {args.pathname} does not exist')
