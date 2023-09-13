@@ -404,43 +404,56 @@ class PDFToImage:
                 # asking user if the cropped region is ok
                 while True:
                     choice = input('\nIs this crop ok? [Y/n] ')
-                    # automatic crop is ok
-                    if choice.lower()[0] == 'y':
-                        if not os.path.isdir(final_path):
-                            os.makedirs(final_path)
-                        cv2.imwrite(os.path.join(final_path, fn_out), interesting_plot)
-                        break
-                    # user cropping
-                    elif choice.lower()[0] == 'n':
-                        resized_page = cv2.resize(doc_page.raster_page, resize)
-                        roi = cv2.selectROI('Select the region of interest', resized_page)
-
-                        if roi[0] != 0 and roi[1] != 0 and roi[2] != 0 and roi[3] != 0:
-                            interesting_plot = doc_page.raster_page[int(roi[1]*self.__size_factor):int(roi[1]*self.__size_factor) + int(roi[3]*self.__size_factor),
-                                                                    int(roi[0]*self.__size_factor):int(roi[0]*self.__size_factor) + int(roi[2]*self.__size_factor)]
-                            
-                            resize_interesting_plot = (int(interesting_plot.shape[1]/self.__size_factor), 
-                                                       int(interesting_plot.shape[0]/self.__size_factor))
-                            
-                            tmp = cv2.resize(interesting_plot, resize_interesting_plot)
-                            cv2.imshow('Selected interesting plot', tmp)
-                            cv2.waitKey(0)
-
+                    # no choice has been made
+                    if len(choice) == 0:
+                        print('Please make a choice!')
+                        continue
+                    else:
+                        # automatic crop is ok
+                        if choice.lower()[0] == 'y':
                             if not os.path.isdir(final_path):
                                 os.makedirs(final_path)
                             cv2.imwrite(os.path.join(final_path, fn_out), interesting_plot)
-                            cv2.destroyAllWindows()
                             break
+                        # user cropping
+                        elif choice.lower()[0] == 'n':
+                            resized_page = cv2.resize(doc_page.raster_page, resize)
+                            roi = cv2.selectROI('Select the region of interest', resized_page)
+
+                            if roi[0] != 0 and roi[1] != 0 and roi[2] != 0 and roi[3] != 0:
+                                interesting_plot = doc_page.raster_page[int(roi[1]*self.__size_factor):int(roi[1]*self.__size_factor) + int(roi[3]*self.__size_factor),
+                                                                        int(roi[0]*self.__size_factor):int(roi[0]*self.__size_factor) + int(roi[2]*self.__size_factor)]
+                                
+                                resize_interesting_plot = (int(interesting_plot.shape[1]/self.__size_factor), 
+                                                        int(interesting_plot.shape[0]/self.__size_factor))
+                                
+                                tmp = cv2.resize(interesting_plot, resize_interesting_plot)
+                                cv2.imshow('Selected interesting plot', tmp)
+                                cv2.waitKey(0)
+
+                                if not os.path.isdir(final_path):
+                                    os.makedirs(final_path)
+                                cv2.imwrite(os.path.join(final_path, fn_out), interesting_plot)
+                                cv2.destroyAllWindows()
+                                break
+                            else:
+                                break
+                        # invalid choice
                         else:
-                            break
-                    # invalid choice
-                    else:
-                        print('Invalid choice!')
-                        continue
+                            print('Invalid choice!')
+                            continue
                 
                 # dataset creation will enable a new prompt
                 if self.__dataset_creation:
-                    class_label = input('Enter class label for this plot: ')
+                    while True:
+                        class_label = input('Enter class label for this plot: ')
+
+                        # no label has been inserted
+                        if len(class_label) == 0:
+                            print('Please insert a label!')
+                            continue
+                        else:
+                            break
 
                     field_names = ['file_path', 'label']
                     row = {'file_path': os.path.join(os.path.relpath(final_path), fn_out),
