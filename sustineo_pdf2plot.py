@@ -4,47 +4,20 @@ import argparse
 from lib.pdf2plot.plot_extractor import PDFToImage
 from lib.pdf2plot.tables_extractor import TableToCSV
 
-def main(pdf_path, language, user_correction, paragraph, dataset_creation, debug, size_factor):
+def main(pdf_path, language, headless, user_correction, paragraph, dataset_creation, debug, size_factor):
     print(f'File {pdf_path} selected')
-    plot_extr = PDFToImage(pdf_path, language, user_correction, paragraph, dataset_creation, debug, size_factor)
+    plot_extr = PDFToImage(pdf_path, language, headless, user_correction, paragraph, dataset_creation, debug, size_factor)
     plot_extr.run()
+
     if not dataset_creation:
         table_extr = TableToCSV(pdf_path)
         table_extr.run()
 
-    filename = os.path.basename(pdf_path)[:-4]
-    out_plot_path = os.path.join('out', filename, 'img', 'plot')
-    out_matrix_path = os.path.join('out', filename, 'img', 'm_matrix')
-    out_gri_table_path = os.path.join('out', filename, 'table', 'gri')
-    out_other_table_path = os.path.join('out', filename, 'table', 'other')
-
-    cnt_plots = 0
-    cnt_matrices = 0
-    cnt_gri_tables = 0
-    cnt_other_tables = 0
-
-    if os.path.isdir(out_plot_path):
-        cnt_plots = len(os.listdir(out_plot_path))
-
-    if os.path.isdir(out_matrix_path):
-        cnt_matrices = len(os.listdir(out_matrix_path))
-    
-    if os.path.isdir(out_gri_table_path):
-        cnt_gri_tables = len(os.listdir(out_gri_table_path))
-
-    if os.path.isdir(out_other_table_path):
-        cnt_other_tables = len(os.listdir(out_other_table_path))
-
     print(f'{os.path.basename(pdf_path)} extraction report:')
-    print(f'{cnt_plots} plots were extracted in {out_plot_path}')
-    print(f'{cnt_matrices} materiality matrices were extracted in {out_matrix_path}')
-    print(f'{cnt_gri_tables} gri tables were extracted in {out_gri_table_path}')
-    print(f'{cnt_other_tables} other tables were extracted in {out_other_table_path}')
-    
-    if not paragraph:
-        print(f'{plot_extr.paragraph_pages} plots require user intervention as were detected likely paragraphs; please run the script in paragraph removal mode using the --paragraph [-p] argument\n')
-    else:
-        print('\n')
+    plot_extr.get_stats()
+
+    if not dataset_creation:
+        table_extr.get_stats()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='sustineo_pdf2plot',
@@ -57,6 +30,9 @@ if __name__ == '__main__':
 
     parser.add_argument('-l', '--language', type=str, default='ita',\
                         help='language of the plot to extract (default="ita")')
+    
+    parser.add_argument('-hm', '--headless', action='store_true',\
+                        help='run in headless mode in lack of GUI environment')
     
     parser.add_argument('-c', '--correction', action='store_true',\
                         help='enable user correction')
@@ -78,7 +54,7 @@ if __name__ == '__main__':
 
     if os.path.isfile(args.pathname):
         if args.pathname.endswith('pdf'):
-            main(args.pathname, args.language, args.correction, args.paragraph, args.dataset_creation, args.debug_mode, args.size_factor)
+            main(args.pathname, args.language, args.headless, args.correction, args.paragraph, args.dataset_creation, args.debug_mode, args.size_factor)
         else:
             print(f'{args.pathname} is not a PDF file\nPlease choose a PDF file')
             exit()
@@ -88,7 +64,7 @@ if __name__ == '__main__':
             for i, fn in enumerate(os.listdir(args.pathname)):
                 complete_fn = os.path.join(args.pathname, fn)
                 print(f'Extracting data from file {i+1} of {n_files}...\n')
-                main(complete_fn, args.language, args.correction, args.paragraph, args.dataset_creation, args.debug_mode, args.size_factor)
+                main(complete_fn, args.language, args.headless, args.correction, args.paragraph, args.dataset_creation, args.debug_mode, args.size_factor)
                 os.remove(complete_fn)
         else:
             print(f'ERROR: File {args.pathname} does not exist')

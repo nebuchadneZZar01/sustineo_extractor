@@ -21,13 +21,14 @@ class PDFToImage:
     Keyword Arguments:
         - path -- Path to the PDF file to extract
         - language -- Language of the PDF file
+        - headless -- Option to avoid GUI use
         - user_correction -- Option to manually correct the image extraction
         - paragraph -- Option to remove detected likely paragraphs in the extracted image
         - dataset_creation -- Option to create a dataset containing the extracted plot
         - debug_mode -- Option to visualize the shape detection in real-time
         - size_fatctor -- Determines the scale-down of the image visualization
     """
-    def __init__(self, path: str, language: str, user_correction: bool, paragraph: bool, dataset_creation: bool, debug_mode: bool, size_factor: float):
+    def __init__(self, path: str, language: str, headless: bool, user_correction: bool, paragraph: bool, dataset_creation: bool, debug_mode: bool, size_factor: float):
         self.__path = path
         self.__filename = os.path.basename(self.__path)[:-4]
 
@@ -48,14 +49,19 @@ class PDFToImage:
 
         self.__debug_mode = debug_mode
         self.__user_correction = user_correction
+        self.__headless = headless
         self.__paragraph_removal = paragraph
         self.__dataset_creation = dataset_creation
-        self.__paragraph_pages = 0
 
         self.__size_factor = size_factor if size_factor != 0.0 else 1.0
 
         if self.__dataset_creation:
             self.__out_csv_annotations = os.path.join(os.getcwd(), 'out', 'annotations.csv')
+
+        # extraction stats
+        self.ex_materiality_mat_cnt = 0                 # total amount extracted materiality matrix
+        self.ex_plot_cnt = 0                            # total amount extracted plots
+        self.ex_plot_w_cnt = 0                          # amount possibly wrong extracted plots
 
     @property
     def filename(self):
@@ -102,15 +108,8 @@ class PDFToImage:
         return self.__lang
     
     @property
-    def paragraph_pages(self):
-        return self.__paragraph_pages
-    
-    @paragraph_pages.setter
-    def paragraph_pages(self, new_val: int):
-        self.__paragraph_pages = new_val
-
-    def paragraph_pages_add(self):
-        self.paragraph_pages += 1
+    def headless(self):
+        return self.__headless
 
     def __page_to_img(self):
         pbar = tqdm(range(self.__pdf_doc.page_count))
@@ -237,8 +236,10 @@ class PDFToImage:
 
             # detecting if materiality matrix or not
             if self.lang_dict[self.lang] in doc_page.text.lower():
+                self.ex_materiality_mat_cnt += 1
                 final_path = self.out_matrix_path
             else:
+                self.ex_plot_cnt += 1
                 final_path = self.out_plot_path
 
             interesting_plot = None
@@ -284,7 +285,7 @@ class PDFToImage:
                         i_bottom_left = (rows[0], work_image.shape[0])                                                # first x coord, limit y
                         i_bottom_right = (rows[-1], work_image.shape[0])                                              # least x coord, origin y
                         i_top_left = (rows[0], 0)                                                                     # first x coord, origin y
-                        i_top_right = (rows[-1], 0)  
+                        i_top_right = (rows[-1], 0)
                     else:
                         i_bottom_left = (rows[0], columns[0])                                                               # first x coord, first y coord
                         i_bottom_right = (rows[-1], columns[0])                                                             # least x coord, first y coord
@@ -300,9 +301,10 @@ class PDFToImage:
                             cv2.circle(tmp, i_top_left, 6, (0, 255, 0), 3)
                             cv2.circle(tmp, i_top_right, 6, (0, 255, 0), 3)
 
-                            tmp_res = cv2.resize(tmp, resize)
-                            cv2.imshow('Finding interesting plots...', tmp_res)
-                            cv2.waitKey(1500)
+                            if not self.headless:
+                                tmp_res = cv2.resize(tmp, resize)
+                                cv2.imshow('Finding interesting plots...', tmp_res)
+                                cv2.waitKey(1500)
 
                         # vertical offset
                         upper_offset = int(1/9 * doc_page.page_size[1])
@@ -394,13 +396,14 @@ class PDFToImage:
             
             # if user correction is enabled from cli
             if (self.__user_correction or self.__dataset_creation) and interesting_plot is not None:
-                tmp = cv2.resize(interesting_plot, (int(interesting_plot.shape[1]/self.__size_factor), 
-                                                    int(interesting_plot.shape[0]/self.__size_factor)))
-                
-                cv2.imshow('Found an interesting plot!', tmp)
+                if not self.headless:
+                    tmp = cv2.resize(interesting_plot, (int(interesting_plot.shape[1]/self.__size_factor), 
+                                                        int(interesting_plot.shape[0]/self.__size_factor)))
+                    
+                    cv2.imshow('Found an interesting plot!', tmp)
 
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
+                    cv2.waitKey(0)
+                    cv2.destroyAllWindows()
                 # asking user if the cropped region is ok
                 while True:
                     choice = input('\nIs this crop ok? [Y/n] ')
@@ -427,14 +430,15 @@ class PDFToImage:
                                 resize_interesting_plot = (int(interesting_plot.shape[1]/self.__size_factor), 
                                                         int(interesting_plot.shape[0]/self.__size_factor))
                                 
-                                tmp = cv2.resize(interesting_plot, resize_interesting_plot)
-                                cv2.imshow('Selected interesting plot', tmp)
-                                cv2.waitKey(0)
+                                if not self.headless:
+                                    tmp = cv2.resize(interesting_plot, resize_interesting_plot)
+                                    cv2.imshow('Selected interesting plot', tmp)
+                                    cv2.waitKey(0)
+                                    cv2.destroyAllWindows()
 
                                 if not os.path.isdir(final_path):
                                     os.makedirs(final_path)
                                 cv2.imwrite(os.path.join(final_path, fn_out), interesting_plot)
-                                cv2.destroyAllWindows()
                                 break
                             else:
                                 break
@@ -503,12 +507,11 @@ class PDFToImage:
                         if final_rect.shape != (0, 0, 3):
                             # normal extraction mode
                             if not self.__paragraph_removal:
-                                self.paragraph_pages_add()
+                                if not self.headless:
+                                    cv2.imshow('Found an interesting plot!', tmp)
+                                    cv2.waitKey(1500)
 
-                                cv2.imshow('Found an interesting plot!', tmp)
-                                cv2.waitKey(1500)
-
-                                print(f'This plot (page {doc_page.page_number}) has a likely paragraph and it will be reported at the end of the extraction')
+                                self.ex_plot_w_cnt += 1
                             # paragraph removal mode
                             else:
                                 cv2.imshow('Interesting plot with paragraph', tmp)
@@ -531,10 +534,12 @@ class PDFToImage:
                                 else:
                                     print('There was an error: probably there wasn\'t actually any paragraph! Paragraph elimination aborted')
                     else:
-                        cv2.imshow('Found an interesting plot!', tmp)
-                        cv2.waitKey(1500)
-
-                    cv2.destroyAllWindows()
+                        if not self.headless:
+                            cv2.imshow('Found an interesting plot!', tmp)
+                            cv2.waitKey(1500)
+                    
+                    if not self.headless:
+                        cv2.destroyAllWindows()
 
                     # saving the final plot
                     if not os.path.isdir(final_path):
@@ -550,3 +555,13 @@ class PDFToImage:
         del self.__pdf_doc
         del self.doc_pages
         gc.collect()
+
+    def get_stats(self):
+        total_amount = self.ex_materiality_mat_cnt + self.ex_plot_cnt
+        ex_plot_c_cnt = self.ex_plot_cnt - self.ex_plot_w_cnt
+
+        print(f'{total_amount} image extractions were made:')
+        print(f'- {self.ex_materiality_mat_cnt} materiality matrices were extracted in {self.out_matrix_path}')
+        print(f'- {self.ex_plot_cnt} plots were extracted in {self.out_plot_path} of which:')
+        print(f'\t - {ex_plot_c_cnt} are extracted correctly')
+        print(f'\t - {self.ex_plot_w_cnt} may require user intervention as were detected likely paragraphs (it could be useful to run the script in paragraph removal mode using the --paragraph [-p] argument)')

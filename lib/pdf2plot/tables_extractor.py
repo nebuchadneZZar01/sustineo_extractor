@@ -23,6 +23,10 @@ class TableToCSV:
         # other type tables location
         self.__out_other_table_path = os.path.join(self.__out_path, 'table', 'other')
 
+        # extraction stats
+        self.ex_table_other_cnt = 0
+        self.ex_table_gri_cnt = 0
+
     @property
     def filename(self):
         return self.__filename
@@ -55,10 +59,19 @@ class TableToCSV:
                     csv_filename = f'page_{page_number}-{i+1}.csv'
 
                     if 'gri' in text.lower():
+                        self.ex_table_gri_cnt += 1
                         if not os.path.isdir(self.out_gri_table_path):
                             os.makedirs(self.out_gri_table_path)
                         df.to_csv(os.path.join(self.out_gri_table_path, csv_filename))
                     else:
+                        self.ex_table_other_cnt += 1
                         if not os.path.isdir(self.out_other_table_path):
                             os.makedirs(self.out_other_table_path)
                         df.to_csv(os.path.join(self.out_other_table_path, csv_filename))
+    
+    def get_stats(self):
+        total_amount = self.ex_table_gri_cnt + self.ex_table_other_cnt 
+
+        print(f'{total_amount} table extractions were made:')
+        print(f'- {self.ex_table_gri_cnt} gri tables were extracted in {self.out_gri_table_path}')
+        print(f'- {self.ex_table_other_cnt} other tables were extracted in {self.out_other_table_path}')
