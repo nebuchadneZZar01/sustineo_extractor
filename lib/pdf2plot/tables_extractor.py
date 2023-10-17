@@ -59,7 +59,6 @@ class TableToCSV:
                     if match_re is not None:
                         with open(self.out_gri_values, 'a') as f:
                             f.write(f'{row.values}\n\n')
-                        print(row.values)
                     else:
                         continue
     

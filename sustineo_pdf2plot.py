@@ -27,6 +27,12 @@ def handler(signum, frame):
 signal.signal(signal.SIGINT, handler)
 
 def main(pdf_path, language, headless, user_correction, paragraph, dataset_creation, debug, size_factor):
+    global total_plot_w_ex
+    global total_plot_ex
+    global total_matrix_ex
+    global total_table_other_ex
+    global total_table_gri_ex
+
     print(f'File {pdf_path} selected')
     plot_extr = PDFToImage(pdf_path, language, headless, user_correction, paragraph, dataset_creation, debug, size_factor)
     plot_extr.run()
@@ -83,7 +89,6 @@ if __name__ == '__main__':
                             scale factor for a better visualization on lower resolution screens (default=3)')
     
     args = parser.parse_args()
-
 
     if os.path.isfile(args.pathname):
         if args.pathname.endswith('pdf'):
