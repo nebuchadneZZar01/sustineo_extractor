@@ -556,6 +556,7 @@ class PDFToImage:
         del self.doc_pages
         gc.collect()
 
+    # print plot extraction stats on cli
     def get_stats(self):
         total_amount = self.ex_materiality_mat_cnt + self.ex_plot_cnt
         ex_plot_c_cnt = self.ex_plot_cnt - self.ex_plot_w_cnt
@@ -565,3 +566,14 @@ class PDFToImage:
         print(f'- {self.ex_plot_cnt} plots were extracted in {self.out_plot_path} of which:')
         print(f'\t - {ex_plot_c_cnt} are extracted correctly')
         print(f'\t - {self.ex_plot_w_cnt} may require user intervention as were detected likely paragraphs (it could be useful to run the script in paragraph removal mode using the --paragraph [-p] argument)')
+
+    # output plot extraction stats on a logfile   
+    def file_stats(self, file_output: any):
+        total_amount = self.ex_materiality_mat_cnt + self.ex_plot_cnt
+        ex_plot_c_cnt = self.ex_plot_cnt - self.ex_plot_w_cnt
+
+        file_output.write(f'{total_amount} image extractions were made:\n')
+        file_output.write(f'- {self.ex_materiality_mat_cnt} materiality matrices were extracted in {self.out_matrix_path}\n')
+        file_output.write(f'- {self.ex_plot_cnt} plots were extracted in {self.out_plot_path} of which:\n')
+        file_output.write(f'\t - {ex_plot_c_cnt} are extracted correctly\n')
+        file_output.write(f'\t - {self.ex_plot_w_cnt} may require user intervention as were detected likely paragraphs (it could be useful to run the script in paragraph removal mode using the --paragraph [-p] argument)\n')

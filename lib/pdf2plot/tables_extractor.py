@@ -94,9 +94,18 @@ class TableToCSV:
                             os.makedirs(self.out_other_table_path)
                         df.to_csv(os.path.join(self.out_other_table_path, csv_filename))
     
+    # print table extraction stats on cli
     def get_stats(self):
         total_amount = self.ex_table_gri_cnt + self.ex_table_other_cnt 
 
         print(f'{total_amount} table extractions were made:')
         print(f'- {self.ex_table_gri_cnt} gri tables were extracted in {self.out_gri_table_path}')
         print(f'- {self.ex_table_other_cnt} other tables were extracted in {self.out_other_table_path}')
+
+    # output table extraction stats on a logfile   
+    def file_stats(self, file_output: any):
+        total_amount = self.ex_table_gri_cnt + self.ex_table_other_cnt 
+
+        file_output.write(f'{total_amount} table extractions were made:\n')
+        file_output.write(f'- {self.ex_table_gri_cnt} gri tables were extracted in {self.out_gri_table_path}\n')
+        file_output.write(f'- {self.ex_table_other_cnt} other tables were extracted in {self.out_other_table_path}\n')
