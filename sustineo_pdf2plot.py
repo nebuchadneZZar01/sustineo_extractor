@@ -56,6 +56,15 @@ def main(pdf_path, language, headless, user_correction, paragraph, dataset_creat
     if not dataset_creation:
         table_extr.get_stats()
 
+    with open('logs.txt', 'a') as testf:
+        testf.write(f'{os.path.basename(pdf_path)} extraction report:\n')
+        plot_extr.file_stats(testf)
+
+        if not dataset_creation:
+            table_extr.file_stats(testf)
+        
+        testf.write('\n\n')
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='sustineo_pdf2plot',
