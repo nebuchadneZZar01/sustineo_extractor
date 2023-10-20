@@ -113,6 +113,9 @@ if __name__ == '__main__':
             for i, fn in enumerate(os.listdir(args.pathname)):
                 complete_fn = os.path.join(args.pathname, fn)
                 print(f'Extracting data from file {i+1} of {n_files}...\n')
+                with open('logs.txt', 'a') as testf:
+                    testf.write(f'Extracting data from file {i+1} of {n_files}...\n')
+                    
                 main(complete_fn, args.language, 
                      args.headless, args.correction, args.paragraph, 
                      args.dataset_creation, args.debug_mode, args.size_factor)
